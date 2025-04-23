@@ -1,0 +1,16 @@
+<%- include('../partials/header') %>
+
+<div class="text-center py-5">
+    <h1 class="text-danger">Erreur</h1>
+    <p class="lead">Une erreur s'est produite lors du traitement de votre demande.</p>
+    
+    <% if (locals.error && locals.error.message) { %>
+        <div class="alert alert-danger my-4">
+            <%= error.message %>
+        </div>
+    <% } %>
+    
+    <a href="/" class="btn btn-primary mt-3">Retour à l'accueil</a>
+</div>
+
+<%- include('../partials/footer') %>
