@@ -1,0 +1,25 @@
+# Dépendances
+node_modules/
+
+# Fichiers d'environnement
+.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Fichiers de construction
+dist/
+build/
+
+# Fichiers temporaires
+tmp/
+temp/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Fichiers uploadés par les utilisateurs
+public/uploads/
