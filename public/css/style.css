@@ -1,0 +1,79 @@
+/* Styles généraux */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Personnalisation des couleurs */
+.btn-primary {
+    background-color: #4a69bd;
+    border-color: #4a69bd;
+}
+
+.btn-primary:hover {
+    background-color: #3c579d;
+    border-color: #3c579d;
+}
+
+.text-primary {
+    color: #4a69bd !important;
+}
+
+/* Styles pour le calendrier */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+}
+
+.calendar-day {
+    border: 1px solid #dee2e6;
+    padding: 10px;
+    min-height: 100px;
+}
+
+.calendar-day.today {
+    background-color: #f8f9fa;
+}
+
+.calendar-day-header {
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+/* Styles pour les disponibilités */
+.availability-yes {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.availability-no {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.availability-maybe {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+/* Animation de chargement */
+.loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #4a69bd;
+    border-radius: 50%;
+    animation: spinner-border 0.75s linear infinite;
+}
+
+@keyframes spinner-border {
+    to { transform: rotate(360deg); }
+}

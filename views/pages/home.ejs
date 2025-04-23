@@ -1,0 +1,50 @@
+<%- include('../partials/header') %>
+
+<div class="px-4 py-5 my-5 text-center">
+    <h1 class="display-5 fw-bold text-primary">Planifiez vos réunions simplement</h1>
+    <div class="col-lg-6 mx-auto">
+        <p class="lead mb-4">
+            Trouvez le meilleur moment pour vos réunions en quelques clics.
+            Proposez des créneaux, invitez des participants et laissez notre plateforme faire le reste.
+        </p>
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+            <% if (locals.user) { %>
+                <a href="/dashboard" class="btn btn-primary btn-lg px-4 gap-3">Tableau de bord</a>
+            <% } else { %>
+                <a href="/auth/register" class="btn btn-primary btn-lg px-4 gap-3">Commencer</a>
+                <a href="/auth/login" class="btn btn-outline-secondary btn-lg px-4">Connexion</a>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row g-4 py-5">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Créez une réunion</h3>
+                    <p class="card-text">Proposez plusieurs créneaux horaires et invitez facilement vos participants par email.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Importez votre calendrier</h3>
+                    <p class="card-text">Uploadez votre fichier .ics et votre disponibilité sera automatiquement analysée.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Finalisez le créneau</h3>
+                    <p class="card-text">Consultez les disponibilités de tous et choisissez le meilleur moment pour votre réunion.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>
