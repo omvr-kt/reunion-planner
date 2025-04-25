@@ -1,0 +1,253 @@
+<%- include('../../partials/header') %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Modifier la réunion</h1>
+</div>
+
+<form action="/meetings/<%= meeting.id %>/update" method="POST" id="edit-meeting-form">
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4>Informations générales</h4>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="title" class="form-label">Titre de la réunion *</label>
+                <input type="text" class="form-control" id="title" name="title" value="<%= meeting.title %>" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="3"><%= meeting.description || '' %></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="location" class="form-label">Lieu</label>
+                <input type="text" class="form-control" id="location" name="location" value="<%= meeting.location || '' %>">
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4>Créneaux existants</h4>
+        </div>
+        <div class="card-body">
+            <% if (timeslots && timeslots.length > 0) { %>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date et heure</th>
+                                <th>Disponibilités</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% timeslots.forEach(timeslot => { 
+                                const startTime = new Date(timeslot.start_time);
+                                const endTime = new Date(timeslot.end_time);
+                                
+                                // Calculer le pourcentage de disponibilité
+                                let availabilityPercent = 0;
+                                if (timeslot.total_participants > 0) {
+                                    availabilityPercent = Math.round((timeslot.available_count / timeslot.total_participants) * 100);
+                                }
+                            %>
+                                <tr>
+                                    <td>
+                                        <%= startTime.toLocaleDateString('fr-FR') %> 
+                                        <%= startTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) %> - 
+                                        <%= endTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) %>
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar <%= availabilityPercent >= 70 ? 'bg-success' : (availabilityPercent >= 40 ? 'bg-warning' : 'bg-danger') %>" 
+                                                 role="progressbar" 
+                                                 style="width: <%= availabilityPercent %>%;" 
+                                                 aria-valuenow="<%= availabilityPercent %>" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                <%= availabilityPercent %>%
+                                            </div>
+                                        </div>
+                                        <small class="text-muted"><%= timeslot.available_count %> sur <%= timeslot.total_participants %> disponibles</small>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <p class="text-muted">Aucun créneau proposé.</p>
+            <% } %>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4>Ajouter des créneaux</h4>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="add-timeslot">
+                <i class="bi bi-plus"></i> Ajouter un créneau
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="timeslots-container">
+                <div class="row mb-3 timeslot-row">
+                    <div class="col-md-6">
+                        <label class="form-label">Date et heure de début</label>
+                        <input type="datetime-local" class="form-control timeslot-start">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">Date et heure de fin</label>
+                        <input type="datetime-local" class="form-control timeslot-end">
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-danger remove-timeslot">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Champs cachés pour stocker les timeslots au format requis -->
+            <div id="timeslots-hidden-container"></div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4>Participants existants (<%= participants.length %>)</h4>
+        </div>
+        <div class="card-body">
+            <% if (participants && participants.length > 0) { %>
+                <ul class="list-group mb-3">
+                    <% participants.forEach(participant => { %>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <% if (participant.first_name && participant.last_name) { %>
+                                    <%= participant.first_name %> <%= participant.last_name %>
+                                    <small class="d-block text-muted"><%= participant.email %></small>
+                                <% } else { %>
+                                    <%= participant.email %>
+                                <% } %>
+                            </div>
+                            <% if (participant.has_responded) { %>
+                                <span class="badge bg-success">A répondu</span>
+                            <% } else { %>
+                                <span class="badge bg-warning text-dark">En attente</span>
+                            <% } %>
+                        </li>
+                    <% }); %>
+                </ul>
+            <% } else { %>
+                <p class="text-muted">Aucun participant.</p>
+            <% } %>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4>Ajouter des participants</h4>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="add-participant">
+                <i class="bi bi-plus"></i> Ajouter un participant
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="participants-container">
+                <div class="row mb-3 participant-row">
+                    <div class="col-md-11">
+                        <label class="form-label">Email du participant</label>
+                        <input type="email" class="form-control participant-email" name="new_participants[]">
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-danger remove-participant">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="d-flex justify-content-between">
+        <a href="/meetings/<%= meeting.id %>" class="btn btn-outline-secondary">Annuler</a>
+        <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+    </div>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ajouter un créneau
+        document.getElementById('add-timeslot').addEventListener('click', function() {
+            const container = document.getElementById('timeslots-container');
+            const newRow = document.querySelector('.timeslot-row').cloneNode(true);
+            
+            // Réinitialiser les valeurs
+            newRow.querySelector('.timeslot-start').value = '';
+            newRow.querySelector('.timeslot-end').value = '';
+            
+            // Ajouter le bouton de suppression
+            newRow.querySelector('.remove-timeslot').addEventListener('click', function() {
+                this.closest('.timeslot-row').remove();
+            });
+            
+            container.appendChild(newRow);
+        });
+        
+        // Supprimer un créneau
+        document.querySelectorAll('.remove-timeslot').forEach(button => {
+            button.addEventListener('click', function() {
+                this.closest('.timeslot-row').remove();
+            });
+        });
+        
+        // Ajouter un participant
+        document.getElementById('add-participant').addEventListener('click', function() {
+            const container = document.getElementById('participants-container');
+            const newRow = document.querySelector('.participant-row').cloneNode(true);
+            
+            // Réinitialiser les valeurs
+            newRow.querySelector('.participant-email').value = '';
+            
+            // Ajouter le bouton de suppression
+            newRow.querySelector('.remove-participant').addEventListener('click', function() {
+                this.closest('.participant-row').remove();
+            });
+            
+            container.appendChild(newRow);
+        });
+        
+        // Supprimer un participant
+        document.querySelectorAll('.remove-participant').forEach(button => {
+            button.addEventListener('click', function() {
+                this.closest('.participant-row').remove();
+            });
+        });
+        
+        // Préparer les données avant soumission
+        document.getElementById('edit-meeting-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const timeslotsContainer = document.getElementById('timeslots-hidden-container');
+            timeslotsContainer.innerHTML = '';
+            
+            // Collecter tous les nouveaux créneaux horaires
+            document.querySelectorAll('.timeslot-row').forEach(row => {
+                const startTime = row.querySelector('.timeslot-start').value;
+                const endTime = row.querySelector('.timeslot-end').value;
+                
+                if (startTime && endTime) {
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'new_timeslots[]';
+                    hiddenInput.value = `${startTime} - ${endTime}`;
+                    
+                    timeslotsContainer.appendChild(hiddenInput);
+                }
+            });
+            
+            this.submit();
+        });
+    });
+</script>
+
+<%- include('../../partials/footer') %>
