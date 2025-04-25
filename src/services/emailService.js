@@ -1,1 +1,0 @@
-// Envoi d'e-mails
