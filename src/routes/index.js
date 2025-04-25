@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const authRoutes = require('./authRoutes');
 const dashboardRoutes = require('./dashboardRoutes');
+const meetingRoutes = require('./meetingRoutes');
 
 // Route d'accueil
 router.get('/', (req, res) => {
@@ -12,5 +13,6 @@ router.get('/', (req, res) => {
 // Regroupement des routes
 router.use('/auth', authRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/meetings', meetingRoutes);
 
 module.exports = router;

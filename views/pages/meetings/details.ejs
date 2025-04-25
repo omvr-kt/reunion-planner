@@ -1,0 +1,184 @@
+<%- include('../../partials/header') %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><%= meeting.title %></h1>
+    
+    <% if (isOrganizer && !meeting.is_finalized) { %>
+        <div>
+            <a href="/meetings/<%= meeting.id %>/edit" class="btn btn-outline-primary me-2">
+                <i class="bi bi-pencil"></i> Modifier
+            </a>
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#finalizeModal">
+                <i class="bi bi-check-circle"></i> Finaliser
+            </button>
+        </div>
+    <% } %>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Informations</h4>
+            </div>
+            <div class="card-body">
+                <% if (meeting.is_finalized) { %>
+                    <div class="alert alert-success">
+                        <strong>Cette réunion a été finalisée.</strong> Le créneau définitif a été choisi.
+                    </div>
+                <% } %>
+                
+                <p><strong>Organisateur :</strong> <%= meeting.organizer_first_name %> <%= meeting.organizer_last_name %></p>
+                
+                <% if (meeting.description) { %>
+                    <p><strong>Description :</strong> <%= meeting.description %></p>
+                <% } %>
+                
+                <% if (meeting.location) { %>
+                    <p><strong>Lieu :</strong> <%= meeting.location %></p>
+                <% } %>
+                
+                <p><strong>Créée le :</strong> <%= new Date(meeting.created_at).toLocaleDateString('fr-FR') %></p>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Créneaux proposés</h4>
+            </div>
+            <div class="card-body">
+                <% if (timeslots && timeslots.length > 0) { %>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th width="40%">Date et heure</th>
+                                    <th width="30%">Disponibilités</th>
+                                    <th width="30%">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% timeslots.forEach(timeslot => { 
+                                    const startTime = new Date(timeslot.start_time);
+                                    const endTime = new Date(timeslot.end_time);
+                                    const isFinal = meeting.is_finalized && meeting.final_timeslot_id == timeslot.id;
+                                    
+                                    // Calculer le pourcentage de disponibilité
+                                    let availabilityPercent = 0;
+                                    if (timeslot.total_participants > 0) {
+                                        availabilityPercent = Math.round((timeslot.available_count / timeslot.total_participants) * 100);
+                                    }
+                                %>
+                                    <tr class="<%= isFinal ? 'table-success' : '' %>">
+                                        <td>
+                                            <%= startTime.toLocaleDateString('fr-FR') %> 
+                                            <%= startTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) %> - 
+                                            <%= endTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) %>
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar <%= availabilityPercent >= 70 ? 'bg-success' : (availabilityPercent >= 40 ? 'bg-warning' : 'bg-danger') %>" 
+                                                     role="progressbar" 
+                                                     style="width: <%= availabilityPercent %>%;" 
+                                                     aria-valuenow="<%= availabilityPercent %>" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
+                                                    <%= availabilityPercent %>%
+                                                </div>
+                                            </div>
+                                            <small class="text-muted"><%= timeslot.available_count %> sur <%= timeslot.total_participants %> disponibles</small>
+                                        </td>
+                                        <td>
+                                            <% if (isFinal) { %>
+                                                <span class="badge bg-success">Créneau choisi</span>
+                                            <% } else if (meeting.is_finalized) { %>
+                                                <span class="badge bg-secondary">Non retenu</span>
+                                            <% } else { %>
+                                                <span class="badge bg-primary">En attente</span>
+                                            <% } %>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } else { %>
+                    <p class="text-muted">Aucun créneau proposé.</p>
+                <% } %>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Participants (<%= participants.length %>)</h4>
+            </div>
+            <div class="card-body">
+                <% if (participants && participants.length > 0) { %>
+                    <ul class="list-group">
+                        <% participants.forEach(participant => { %>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <% if (participant.first_name && participant.last_name) { %>
+                                        <%= participant.first_name %> <%= participant.last_name %>
+                                        <small class="d-block text-muted"><%= participant.email %></small>
+                                    <% } else { %>
+                                        <%= participant.email %>
+                                    <% } %>
+                                </div>
+                                <% if (participant.has_responded) { %>
+                                    <span class="badge bg-success">A répondu</span>
+                                <% } else { %>
+                                    <span class="badge bg-warning text-dark">En attente</span>
+                                <% } %>
+                            </li>
+                        <% }); %>
+                    </ul>
+                <% } else { %>
+                    <p class="text-muted">Aucun participant.</p>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<% if (isOrganizer && !meeting.is_finalized && timeslots && timeslots.length > 0) { %>
+    <!-- Modal de finalisation -->
+    <div class="modal fade" id="finalizeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Finaliser la réunion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Choisissez le créneau définitif pour cette réunion. Une notification sera envoyée à tous les participants.</p>
+                    
+                    <form action="/meetings/<%= meeting.id %>/finalize" method="POST" id="finalize-form">
+                        <% timeslots.forEach(timeslot => { 
+                            const startTime = new Date(timeslot.start_time);
+                            const endTime = new Date(timeslot.end_time);
+                        %>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="timeslot_id" id="timeslot_<%= timeslot.id %>" value="<%= timeslot.id %>" required>
+                                <label class="form-check-label" for="timeslot_<%= timeslot.id %>">
+                                    <%= startTime.toLocaleDateString('fr-FR') %> 
+                                    <%= startTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) %> - 
+                                    <%= endTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) %>
+                                    <small class="d-block text-muted"><%= timeslot.available_count %> sur <%= timeslot.total_participants %> disponibles</small>
+                                </label>
+                            </div>
+                        <% }); %>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" form="finalize-form" class="btn btn-success">Confirmer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+<% } %>
+
+<%- include('../../partials/footer') %>

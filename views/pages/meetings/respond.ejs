@@ -1,0 +1,180 @@
+<%- include('../../partials/header') %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Répondre à l'invitation</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Informations sur la réunion</h4>
+            </div>
+            <div class="card-body">
+                <h5><%= meeting.title %></h5>
+                
+                <% if (meeting.description) { %>
+                    <p><strong>Description :</strong> <%= meeting.description %></p>
+                <% } %>
+                
+                <% if (meeting.location) { %>
+                    <p><strong>Lieu :</strong> <%= meeting.location %></p>
+                <% } %>
+                
+                <p><strong>Organisateur :</strong> <%= meeting.organizer_first_name %> <%= meeting.organizer_last_name %></p>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Vos disponibilités</h4>
+            </div>
+            <div class="card-body">
+                <% if (meeting.is_finalized) { %>
+                    <div class="alert alert-info">
+                        Cette réunion a déjà été finalisée. Vous ne pouvez plus modifier vos disponibilités.
+                    </div>
+                <% } else { %>
+                    <form action="/meetings/respond/<%= participant.access_token %>" method="POST" id="respond-form">
+                        <div class="mb-4 d-grid gap-3">
+                            <% timeslots.forEach(timeslot => { 
+                                const startTime = new Date(timeslot.start_time);
+                                const endTime = new Date(timeslot.end_time);
+                                
+                                // Vérifier si une réponse existe déjà
+                                const existingResponse = responses.find(r => r.timeslot_id === timeslot.id);
+                                const currentAvailability = existingResponse ? (existingResponse.availability ? 'yes' : 'no') : '';
+                            %>
+                                <div class="card border">
+                                    <div class="card-body">
+                                        <h5 class="card-title">
+                                            <%= startTime.toLocaleDateString('fr-FR') %> 
+                                            <%= startTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) %> - 
+                                            <%= endTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) %>
+                                        </h5>
+                                        
+                                        <div class="mt-3">
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" 
+                                                       name="responses[timeslot_<%= timeslot.id %>]" 
+                                                       id="response_<%= timeslot.id %>_yes" 
+                                                       value="yes"
+                                                       <%= currentAvailability === 'yes' ? 'checked' : '' %>>
+                                                <label class="form-check-label" for="response_<%= timeslot.id %>_yes">
+                                                    <span class="text-success">Disponible</span>
+                                                </label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" 
+                                                       name="responses[timeslot_<%= timeslot.id %>]" 
+                                                       id="response_<%= timeslot.id %>_no" 
+                                                       value="no"
+                                                       <%= currentAvailability === 'no' ? 'checked' : '' %>>
+                                                <label class="form-check-label" for="response_<%= timeslot.id %>_no">
+                                                    <span class="text-danger">Non disponible</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Enregistrer mes disponibilités</button>
+                        </div>
+                    </form>
+                <% } %>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Importer un calendrier</h4>
+            </div>
+            <div class="card-body">
+                <p>Vous pouvez importer votre calendrier au format .ics pour analyser automatiquement vos disponibilités.</p>
+                
+                <form id="import-calendar-form" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="ics_file" class="form-label">Fichier .ics</label>
+                        <input class="form-control" type="file" id="ics_file" name="ics_file" accept=".ics">
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <span class="spinner-border spinner-border-sm d-none" id="upload-spinner"></span>
+                            Analyser les disponibilités
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gestion de l'import du calendrier
+        const importForm = document.getElementById('import-calendar-form');
+        const spinner = document.getElementById('upload-spinner');
+        
+        if (importForm) {
+            importForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                const fileInput = document.getElementById('ics_file');
+                
+                if (!fileInput.files[0]) {
+                    alert('Veuillez sélectionner un fichier .ics');
+                    return;
+                }
+                
+                // Afficher le spinner
+                spinner.classList.remove('d-none');
+                
+                // Envoyer le fichier
+                fetch('/meetings/respond/<%= participant.access_token %>/upload-ics', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Mettre à jour les réponses dans le formulaire
+                        for (const key in data.availability) {
+                            const value = data.availability[key];
+                            const yesRadio = document.getElementById(`response_${key.replace('timeslot_', '')}_yes`);
+                            const noRadio = document.getElementById(`response_${key.replace('timeslot_', '')}_no`);
+                            
+                            if (yesRadio && noRadio) {
+                                if (value === 'yes') {
+                                    yesRadio.checked = true;
+                                } else {
+                                    noRadio.checked = true;
+                                }
+                            }
+                        }
+                        
+                        alert('Votre calendrier a été analysé avec succès. Veuillez vérifier vos disponibilités et les enregistrer.');
+                    } else {
+                        alert('Erreur : ' + (data.error || 'Impossible d\'analyser le fichier'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Une erreur s\'est produite lors de l\'analyse du fichier');
+                })
+                .finally(() => {
+                    // Cacher le spinner
+                    spinner.classList.add('d-none');
+                });
+            });
+        }
+    });
+</script>
+
+<%- include('../../partials/footer') %>
