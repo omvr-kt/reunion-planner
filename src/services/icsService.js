@@ -1,5 +1,5 @@
 // src/services/icsService.js
-const icalParser = require('ical-parser');
+const ical = require('ical');
 const fs = require('fs').promises;
 
 const icsService = {
@@ -10,20 +10,21 @@ const icsService = {
       const fileContent = await fs.readFile(filePath, 'utf8');
       
       // Parser le contenu
-      const calendar = icalParser.parseString(fileContent);
+      const calendar = ical.parseICS(fileContent);
       
       // Extraire les événements
       const events = [];
       
-      if (calendar && calendar.events) {
-        for (const event of calendar.events) {
+      for (const key in calendar) {
+        if (calendar[key].type === 'VEVENT') {
+          const event = calendar[key];
           events.push({
             uid: event.uid,
             summary: event.summary,
-            description: event.description,
-            start: new Date(event.start),
-            end: new Date(event.end),
-            location: event.location
+            description: event.description || '',
+            start: event.start,
+            end: event.end,
+            location: event.location || ''
           });
         }
       }
