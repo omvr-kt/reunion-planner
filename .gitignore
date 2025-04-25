@@ -19,6 +19,7 @@ temp/
 
 # Fichiers système
 .DS_Store
+**/.DS_Store
 Thumbs.db
 
 # Fichiers uploadés par les utilisateurs

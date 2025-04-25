@@ -1,1 +1,58 @@
-<h1>Dashboard</h1>
+<%- include('../../partials/header') %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Tableau de bord</h1>
+    <% if (locals.user.is_organizer) { %>
+        <a href="/meetings/create" class="btn btn-primary">
+            <i class="bi bi-plus"></i> Nouvelle réunion
+        </a>
+    <% } %>
+</div>
+
+<% if (meetings && meetings.length > 0) { %>
+    <div class="row">
+        <% meetings.forEach(meeting => { %>
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title"><%= meeting.title %></h5>
+                        <p class="card-text text-truncate"><%= meeting.description || 'Aucune description' %></p>
+                        
+                        <% if (locals.user.is_organizer) { %>
+                            <p class="small text-muted">
+                                <i class="bi bi-people"></i> <%= meeting.participant_count %> participant(s)
+                            </p>
+                            <p class="small text-muted">
+                                <i class="bi bi-calendar-event"></i> <%= meeting.is_finalized ? 'Finalisée' : 'En attente' %>
+                            </p>
+                        <% } else { %>
+                            <p class="small text-muted">
+                                Organisateur: <%= meeting.organizer_first_name %> <%= meeting.organizer_last_name %>
+                            </p>
+                            <p class="small text-muted">
+                                Statut: <%= meeting.has_responded ? 'Répondu' : 'En attente de réponse' %>
+                            </p>
+                        <% } %>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="/meetings/<%= meeting.id %>" class="btn btn-sm btn-outline-primary">Voir les détails</a>
+                        
+                        <% if (locals.user.is_organizer && !meeting.is_finalized) { %>
+                            <a href="/meetings/<%= meeting.id %>/edit" class="btn btn-sm btn-outline-secondary">Modifier</a>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        <% }); %>
+    </div>
+<% } else { %>
+    <div class="alert alert-info">
+        <% if (locals.user.is_organizer) { %>
+            Vous n'avez pas encore créé de réunion. Cliquez sur "Nouvelle réunion" pour commencer.
+        <% } else { %>
+            Vous n'avez pas encore été invité à des réunions.
+        <% } %>
+    </div>
+<% } %>
+
+<%- include('../../partials/footer') %>
