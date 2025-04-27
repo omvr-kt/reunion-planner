@@ -1,5 +1,6 @@
 # Dépendances
 node_modules/
+pnpm-lock.yaml
 
 # Fichiers d'environnement
 .env
