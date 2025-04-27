@@ -1,12 +1,7 @@
 -- db/init.sql
 
--- Suppression des tables si elles existent déjà (utile pour réinitialiser)
-DROP TABLE IF EXISTS attendee_responses;
-DROP TABLE IF EXISTS timeslots;
-DROP TABLE IF EXISTS meeting_participants;
-DROP TABLE IF EXISTS meetings;
-DROP TABLE IF EXISTS session;
-DROP TABLE IF EXISTS users;
+CREATE DATABASE IF NOT EXISTS reunion_db;
+USE reunion_db;
 
 -- Table des utilisateurs
 CREATE TABLE users (
