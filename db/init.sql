@@ -1,7 +1,5 @@
 -- db/init.sql
-
-CREATE DATABASE IF NOT EXISTS reunion_db;
-USE reunion_db;
+CREATE DATABASE reunion_db;
 
 -- Table des utilisateurs
 CREATE TABLE users (
