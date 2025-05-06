@@ -1,50 +1,135 @@
 <%- include('../partials/header') %>
 
-<div class="px-4 py-5 my-5 text-center">
-    <h1 class="display-5 fw-bold text-primary">Planifiez vos réunions simplement</h1>
-    <div class="col-lg-6 mx-auto">
-        <p class="lead mb-4">
-            Trouvez le meilleur moment pour vos réunions en quelques clics.
-            Proposez des créneaux, invitez des participants et laissez notre plateforme faire le reste.
-        </p>
-        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-            <% if (locals.user) { %>
-                <a href="/dashboard" class="btn btn-primary btn-lg px-4 gap-3">Tableau de bord</a>
-            <% } else { %>
-                <a href="/auth/register" class="btn btn-primary btn-lg px-4 gap-3">Commencer</a>
-                <a href="/auth/login" class="btn btn-outline-secondary btn-lg px-4">Connexion</a>
-            <% } %>
+<section class="py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-5 mb-lg-0">
+                <h1 class="display-4 fw-bold mb-3">Planifiez vos réunions <span class="text-primary">simplement</span></h1>
+                <p class="lead mb-4">
+                    Trouvez le créneau idéal pour réunir tout le monde en quelques clics. Proposez des horaires, 
+                    invitez vos participants et laissez notre plateforme vous aider à finaliser la décision.
+                </p>
+                <div class="d-flex flex-wrap">
+                    <% if (locals.user) { %>
+                        <a href="/dashboard" class="btn btn-primary btn-lg mb-2 mr-3">
+                            <i class="bi bi-columns-gap mr-2"></i>Tableau de bord
+                        </a>
+                        <% if (locals.user.is_organizer) { %>
+                            <a href="/meetings/create" class="btn btn-outline-primary btn-lg mb-2">
+                                <i class="bi bi-plus-circle mr-2"></i>Nouvelle réunion
+                            </a>
+                        <% } %>
+                    <% } else { %>
+                        <a href="/auth/register" class="btn btn-primary btn-lg mb-2 mr-3">
+                            <i class="bi bi-person-plus mr-2"></i>Commencer gratuitement
+                        </a>
+                        <a href="/auth/login" class="btn btn-outline-primary btn-lg mb-2">
+                            <i class="bi bi-box-arrow-in-right mr-2"></i>Connexion
+                        </a>
+                    <% } %>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-lg">
+                    <div class="card-body p-4">
+                        <div style="text-align: center; margin-bottom: 1.5rem;">
+                            <i class="bi bi-calendar-check" style="font-size: 5rem; color: var(--primary);"></i>
+                        </div>
+                        <h3 class="text-center mb-4">Comment ça marche ?</h3>
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="badge-primary p-2 rounded mr-3" style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; font-weight: bold;">1</div>
+                            <div>Proposez plusieurs créneaux pour votre réunion</div>
+                        </div>
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="badge-primary p-2 rounded mr-3" style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; font-weight: bold;">2</div>
+                            <div>Invitez vos participants par email</div>
+                        </div>
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="badge-primary p-2 rounded mr-3" style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; font-weight: bold;">3</div>
+                            <div>Suivez les réponses et choisissez le meilleur créneau</div>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="badge-primary p-2 rounded mr-3" style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; font-weight: bold;">4</div>
+                            <div>Confirmez la réunion et tous les participants sont notifiés</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+</section>
 
-<div class="container py-5">
-    <div class="row g-4 py-5">
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <h3 class="card-title">Créez une réunion</h3>
-                    <p class="card-text">Proposez plusieurs créneaux horaires et invitez facilement vos participants par email.</p>
+<section class="py-5 bg-white">
+    <div class="container">
+        <h2 class="text-center mb-5">Fonctionnalités principales</h2>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center p-4">
+                        <div style="margin-bottom: 1rem;">
+                            <i class="bi bi-calendar-plus" style="font-size: 3rem; color: var(--primary);"></i>
+                        </div>
+                        <h3>Création de réunions</h3>
+                        <p>Créez facilement une réunion avec plusieurs créneaux horaires possibles et invitez vos participants en quelques clics.</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <h3 class="card-title">Importez votre calendrier</h3>
-                    <p class="card-text">Uploadez votre fichier .ics et votre disponibilité sera automatiquement analysée.</p>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center p-4">
+                        <div style="margin-bottom: 1rem;">
+                            <i class="bi bi-upload" style="font-size: 3rem; color: var(--primary);"></i>
+                        </div>
+                        <h3>Import de calendrier</h3>
+                        <p>Importez votre calendrier au format .ics pour automatiquement indiquer vos disponibilités sans saisie manuelle.</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <h3 class="card-title">Finalisez le créneau</h3>
-                    <p class="card-text">Consultez les disponibilités de tous et choisissez le meilleur moment pour votre réunion.</p>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center p-4">
+                        <div style="margin-bottom: 1rem;">
+                            <i class="bi bi-file-earmark-text" style="font-size: 3rem; color: var(--primary);"></i>
+                        </div>
+                        <h3>Partage de documents</h3>
+                        <p>Partagez facilement des documents avec tous les participants à la réunion pour une meilleure préparation.</p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
+
+<section class="py-5" style="background-color: rgba(37, 99, 235, 0.05);">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <h2 class="mb-4">Simplicité et efficacité pour vos réunions</h2>
+                <p class="mb-3">ReunionPlanner simplifie la planification de réunions avec plusieurs participants :</p>
+                <ul style="list-style-type: none; padding-left: 0;">
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-primary mr-2"></i> Proposition de plusieurs créneaux</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-primary mr-2"></i> Invitations automatiques par email</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-primary mr-2"></i> Visualisation des disponibilités en temps réel</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-primary mr-2"></i> Finalisation en un clic</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-primary mr-2"></i> Export au format ICS pour intégration à votre agenda</li>
+                </ul>
+                <a href="/auth/register" class="btn btn-primary mt-2">
+                    <i class="bi bi-arrow-right mr-2"></i>Commencer maintenant
+                </a>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow">
+                    <div class="card-body p-4" style="background-color: rgba(37, 99, 235, 0.05);">
+                        <div style="text-align: center;">
+                            <i class="bi bi-calendar-check" style="font-size: 8rem; color: var(--primary); margin-bottom: 1rem;"></i>
+                            <h3 class="mb-3">Planification intelligente</h3>
+                            <p class="text-muted">Visualisez les disponibilités de tous vos participants en un coup d'œil et identifiez facilement le meilleur créneau pour votre réunion.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
 <%- include('../partials/footer') %>

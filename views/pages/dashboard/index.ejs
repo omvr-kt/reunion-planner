@@ -4,55 +4,205 @@
     <h1>Tableau de bord</h1>
     <% if (locals.user.is_organizer) { %>
         <a href="/meetings/create" class="btn btn-primary">
-            <i class="bi bi-plus"></i> Nouvelle réunion
+            <i class="bi bi-plus-circle mr-2"></i>Nouvelle réunion
         </a>
     <% } %>
 </div>
 
-<% if (meetings && meetings.length > 0) { %>
-    <div class="row">
-        <% meetings.forEach(meeting => { %>
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title"><%= meeting.title %></h5>
-                        <p class="card-text text-truncate"><%= meeting.description || 'Aucune description' %></p>
-                        
-                        <% if (locals.user.is_organizer) { %>
-                            <p class="small text-muted">
-                                <i class="bi bi-people"></i> <%= meeting.participant_count %> participant(s)
-                            </p>
-                            <p class="small text-muted">
-                                <i class="bi bi-calendar-event"></i> <%= meeting.is_finalized ? 'Finalisée' : 'En attente' %>
-                            </p>
-                        <% } else { %>
-                            <p class="small text-muted">
-                                Organisateur: <%= meeting.organizer_first_name %> <%= meeting.organizer_last_name %>
-                            </p>
-                            <p class="small text-muted">
-                                Statut: <%= meeting.has_responded ? 'Répondu' : 'En attente de réponse' %>
-                            </p>
-                        <% } %>
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card dashboard-card">
+            <div class="card-body">
+                <div class="dashboard-card-header">
+                    <div class="dashboard-card-icon">
+                        <i class="bi bi-calendar2-week"></i>
                     </div>
-                    <div class="card-footer bg-transparent">
-                        <a href="/meetings/<%= meeting.id %>" class="btn btn-sm btn-outline-primary">Voir les détails</a>
-                        
-                        <% if (locals.user.is_organizer && !meeting.is_finalized) { %>
-                            <a href="/meetings/<%= meeting.id %>/edit" class="btn btn-sm btn-outline-secondary">Modifier</a>
-                        <% } %>
-                    </div>
+                    <h3 class="dashboard-card-title">Réunions</h3>
                 </div>
+                <div class="dashboard-card-count"><%= meetings ? meetings.length : 0 %></div>
+                <p class="text-muted">Réunions <%= locals.user.is_organizer ? 'organisées' : 'auxquelles vous participez' %></p>
             </div>
-        <% }); %>
+        </div>
     </div>
-<% } else { %>
-    <div class="alert alert-info">
-        <% if (locals.user.is_organizer) { %>
-            Vous n'avez pas encore créé de réunion. Cliquez sur "Nouvelle réunion" pour commencer.
+    
+    <div class="col-md-4 mb-3">
+        <div class="card dashboard-card">
+            <div class="card-body">
+                <div class="dashboard-card-header">
+                    <div class="dashboard-card-icon" style="background-color: rgba(239, 68, 68, 0.1); color: var(--danger);">
+                        <i class="bi bi-exclamation-circle"></i>
+                    </div>
+                    <h3 class="dashboard-card-title">En attente</h3>
+                </div>
+                <div class="dashboard-card-count">
+                    <%= meetings ? meetings.filter(m => locals.user.is_organizer ? !m.is_finalized : !m.has_responded).length : 0 %>
+                </div>
+                <p class="text-muted"><%= locals.user.is_organizer ? 'À finaliser' : 'Réponse requise' %></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card dashboard-card">
+            <div class="card-body">
+                <div class="dashboard-card-header">
+                    <div class="dashboard-card-icon" style="background-color: rgba(16, 185, 129, 0.1); color: var(--success);">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <h3 class="dashboard-card-title">Confirmées</h3>
+                </div>
+                <div class="dashboard-card-count">
+                    <%= meetings ? meetings.filter(m => m.is_finalized).length : 0 %>
+                </div>
+                <p class="text-muted">Réunions finalisées</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="mb-0">Réunions à venir</h3>
+        <div class="d-flex">
+            <div class="form-group mb-0 mr-3">
+                <select class="form-select form-select-sm" id="sortMeetings">
+                    <option value="latest">Récentes d'abord</option>
+                    <option value="oldest">Anciennes d'abord</option>
+                    <option value="name">Par titre</option>
+                </select>
+            </div>
+            <div class="form-group mb-0">
+                <input type="text" class="form-control form-control-sm" id="searchMeetings" placeholder="Rechercher...">
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <% if (meetings && meetings.length > 0) { %>
+            <div class="meeting-list">
+                <% meetings.forEach(meeting => { %>
+                    <div class="meeting-item" data-title="<%= meeting.title.toLowerCase() %>">
+                        <div class="p-3 border-bottom d-flex align-items-stretch">
+                            <!-- Icône de la réunion (largeur fixe) -->
+                            <div class="mr-3 d-flex align-items-center" style="flex: 0 0 50px;">
+                                <div style="width: 50px; height: 50px; background-color: <%= meeting.is_finalized ? 'rgba(16, 185, 129, 0.1)' : 'rgba(37, 99, 235, 0.1)' %>; color: <%= meeting.is_finalized ? 'var(--success)' : 'var(--primary)' %>; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                                    <i class="bi <%= meeting.is_finalized ? 'bi-check-circle' : 'bi-calendar' %>" style="font-size: 1.5rem;"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- Informations de la réunion (flexible mais limité) -->
+                            <div class="d-flex flex-column justify-content-center mr-3" style="flex: 1 1 auto; min-width: 0; max-width: calc(100% - 250px);">
+                                <h4 class="mb-1 text-truncate" title="<%= meeting.title %>"><%= meeting.title %></h4>
+                                <div class="d-flex flex-wrap" style="gap: 0.5rem;">
+                                    <% if (locals.user.is_organizer) { %>
+                                        <span class="badge badge-primary">
+                                            <i class="bi bi-people mr-1"></i><%= meeting.participant_count %> participant(s)
+                                        </span>
+                                    <% } else { %>
+                                        <span class="badge badge-secondary">
+                                            <i class="bi bi-person mr-1"></i><%= meeting.organizer_first_name %> <%= meeting.organizer_last_name %>
+                                        </span>
+                                    <% } %>
+                                    
+                                    <% if (meeting.is_finalized) { %>
+                                        <span class="badge badge-success">
+                                            <i class="bi bi-check-circle mr-1"></i>Finalisée
+                                        </span>
+                                    <% } else { %>
+                                        <% if (locals.user.is_organizer) { %>
+                                            <span class="badge badge-warning">
+                                                <i class="bi bi-exclamation-circle mr-1"></i>En attente
+                                            </span>
+                                        <% } else if (meeting.has_responded) { %>
+                                            <span class="badge badge-success">
+                                                <i class="bi bi-check-circle mr-1"></i>Répondu
+                                            </span>
+                                        <% } else { %>
+                                            <span class="badge badge-danger">
+                                                <i class="bi bi-exclamation-circle mr-1"></i>À répondre
+                                            </span>
+                                        <% } %>
+                                    <% } %>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions et date (largeur fixe) -->
+                            <div class="d-flex flex-column justify-content-center" style="flex: 0 0 auto; min-width: 170px; text-align: right;">
+                                <div style="display: flex; flex-wrap: nowrap; gap: 0.3rem; justify-content: flex-end;">
+                                    <a href="/meetings/<%= meeting.id %>" class="btn btn-outline-primary btn-sm">Détails</a>
+                                    <% if (locals.user.is_organizer && !meeting.is_finalized) { %>
+                                        <a href="/meetings/<%= meeting.id %>/edit" class="btn btn-outline-secondary btn-sm">Modifier</a>
+                                    <% } %>
+                                </div>
+                                <small class="text-muted d-block mt-1">Créée le <%= new Date(meeting.created_at).toLocaleDateString('fr-FR') %></small>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
         <% } else { %>
-            Vous n'avez pas encore été invité à des réunions.
+            <div class="text-center p-5">
+                <i class="bi bi-calendar-x" style="font-size: 3rem; color: var(--gray-400);"></i>
+                <h4 class="mt-3">Aucune réunion</h4>
+                <p class="text-muted">
+                    <% if (locals.user.is_organizer) { %>
+                        Vous n'avez pas encore créé de réunion. Utilisez le bouton "Nouvelle réunion" pour commencer.
+                    <% } else { %>
+                        Vous n'avez pas encore été invité à des réunions.
+                    <% } %>
+                </p>
+                <% if (locals.user.is_organizer) { %>
+                    <a href="/meetings/create" class="btn btn-primary mt-2">
+                        <i class="bi bi-plus-circle mr-2"></i>Nouvelle réunion
+                    </a>
+                <% } %>
+            </div>
         <% } %>
     </div>
-<% } %>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const sortSelect = document.getElementById('sortMeetings');
+        const meetingList = document.querySelector('.meeting-list');
+        
+        if (sortSelect && meetingList) {
+            sortSelect.addEventListener('change', function() {
+                const meetingItems = Array.from(document.querySelectorAll('.meeting-item'));
+                
+                meetingItems.sort(function(a, b) {
+                    if (sortSelect.value === 'name') {
+                        return a.dataset.title.localeCompare(b.dataset.title);
+                    } else if (sortSelect.value === 'oldest') {
+                        return 1;
+                    } else {
+                        return -1;
+                    }
+                });
+                
+                meetingItems.forEach(function(item) {
+                    meetingList.appendChild(item);
+                });
+            });
+        }
+        
+        const searchInput = document.getElementById('searchMeetings');
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const meetingItems = document.querySelectorAll('.meeting-item');
+                
+                meetingItems.forEach(function(item) {
+                    const title = item.dataset.title;
+                    if (title.includes(searchTerm)) {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+    });
+</script>
 
 <%- include('../../partials/footer') %>

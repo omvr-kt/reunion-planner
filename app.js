@@ -5,18 +5,35 @@ const bodyParser = require('body-parser');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const { pool } = require('./config/database');
+const csrfMiddleware = require('./src/middlewares/csrfMiddleware');
+const moment = require('moment-timezone');
+const helmet = require('helmet');
 require('dotenv').config();
 
-// Initialisation de l'application Express
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuration des middlewares
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "code.jquery.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net"],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'", "cdn.jsdelivr.net"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  xssFilter: true,
+}));
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Configuration des sessions
 app.use(session({
   store: new pgSession({
     pool: pool,
@@ -25,34 +42,70 @@ app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 } // 30 jours
+  cookie: { 
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  }
 }));
 
-// Middleware pour les messages flash
 app.use(require('./src/middlewares/flashMiddleware'));
 
-// Configuration du moteur de template EJS
+app.use(csrfMiddleware.generate);
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Routes
+app.use((req, res, next) => {
+  res.locals.escapeHTML = (text) => {
+    if (!text) return '';
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+  
+  res.locals.formatDate = (date, format = 'DD/MM/YYYY') => {
+    if (!date) return '';
+    return moment(date).format(format);
+  };
+  
+  res.locals.formatDateTime = (date, format = 'DD/MM/YYYY HH:mm', timezone = 'Europe/Paris') => {
+    if (!date) return '';
+    return moment(date).tz(timezone).format(format);
+  };
+  
+  res.locals.userTimezone = req.session.timezone || 'Europe/Paris';
+  
+  res.locals.commonTimezones = [
+    'Europe/Paris', 'Europe/London', 'Europe/Berlin', 'Europe/Moscow',
+    'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+    'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Dubai', 'Asia/Singapore',
+    'Australia/Sydney', 'Australia/Perth',
+    'Africa/Cairo', 'Africa/Johannesburg',
+    'Pacific/Auckland'
+  ];
+  
+  next();
+});
+
 app.use(require('./src/routes'));
 
-// Middleware pour gérer les erreurs 404
 app.use((req, res, next) => {
   res.status(404).render('pages/404', { title: 'Page non trouvée' });
 });
 
-// Middleware pour gérer les erreurs
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).render('pages/error', { 
     title: 'Erreur serveur',
-    error: process.env.NODE_ENV === 'development' ? err : {}
+    error: process.env.NODE_ENV === 'development' ? err : { message: 'Une erreur s\'est produite' }
   });
 });
 
-// Démarrage du serveur
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });

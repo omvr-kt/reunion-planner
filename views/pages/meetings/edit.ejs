@@ -5,6 +5,7 @@
 </div>
 
 <form action="/meetings/<%= meeting.id %>/update" method="POST" id="edit-meeting-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="card mb-4">
         <div class="card-header">
             <h4>Informations générales</h4>

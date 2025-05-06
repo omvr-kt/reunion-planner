@@ -5,6 +5,7 @@
 </div>
 
 <form action="/meetings/create" method="POST" id="create-meeting-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="card mb-4">
         <div class="card-header">
             <h4>Informations générales</h4>
@@ -53,7 +54,6 @@
                 </div>
             </div>
             
-            <!-- Champs cachés pour stocker les timeslots au format requis -->
             <div id="timeslots-hidden-container"></div>
         </div>
     </div>
@@ -90,16 +90,13 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Ajouter un créneau
         document.getElementById('add-timeslot').addEventListener('click', function() {
             const container = document.getElementById('timeslots-container');
             const newRow = document.querySelector('.timeslot-row').cloneNode(true);
             
-            // Réinitialiser les valeurs
             newRow.querySelector('.timeslot-start').value = '';
             newRow.querySelector('.timeslot-end').value = '';
             
-            // Ajouter le bouton de suppression
             newRow.querySelector('.remove-timeslot').addEventListener('click', function() {
                 if (document.querySelectorAll('.timeslot-row').length > 1) {
                     this.closest('.timeslot-row').remove();
@@ -109,7 +106,6 @@
             container.appendChild(newRow);
         });
         
-        // Supprimer un créneau
         document.querySelectorAll('.remove-timeslot').forEach(button => {
             button.addEventListener('click', function() {
                 if (document.querySelectorAll('.timeslot-row').length > 1) {
@@ -118,15 +114,13 @@
             });
         });
         
-        // Ajouter un participant
         document.getElementById('add-participant').addEventListener('click', function() {
             const container = document.getElementById('participants-container');
             const newRow = document.querySelector('.participant-row').cloneNode(true);
             
-            // Réinitialiser les valeurs
+            newRow.querySelector('.participant-email').value = '';
             newRow.querySelector('.participant-email').value = '';
             
-            // Ajouter le bouton de suppression
             newRow.querySelector('.remove-participant').addEventListener('click', function() {
                 if (document.querySelectorAll('.participant-row').length > 1) {
                     this.closest('.participant-row').remove();
@@ -136,7 +130,6 @@
             container.appendChild(newRow);
         });
         
-        // Supprimer un participant
         document.querySelectorAll('.remove-participant').forEach(button => {
             button.addEventListener('click', function() {
                 if (document.querySelectorAll('.participant-row').length > 1) {
@@ -145,14 +138,12 @@
             });
         });
         
-        // Préparer les données avant soumission
         document.getElementById('create-meeting-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const timeslotsContainer = document.getElementById('timeslots-hidden-container');
             timeslotsContainer.innerHTML = '';
             
-            // Collecter tous les créneaux horaires
             document.querySelectorAll('.timeslot-row').forEach(row => {
                 const startTime = row.querySelector('.timeslot-start').value;
                 const endTime = row.querySelector('.timeslot-end').value;

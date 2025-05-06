@@ -1,60 +1,127 @@
 <%- include('../../partials/header') %>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><%= meeting.title %></h1>
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+    <h1 class="mb-3 mb-md-0"><%= escapeHTML(meeting.title) %></h1>
     
-    <% if (isOrganizer && !meeting.is_finalized) { %>
-        <div>
-            <a href="/meetings/<%= meeting.id %>/edit" class="btn btn-outline-primary me-2">
-                <i class="bi bi-pencil"></i> Modifier
+    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+        <% if (isOrganizer && !meeting.is_finalized) { %>
+            <a href="/meetings/<%= meeting.id %>/edit" class="btn btn-outline-primary mb-2">
+                <i class="bi bi-pencil mr-1"></i> Modifier
             </a>
-            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#finalizeModal">
-                <i class="bi bi-check-circle"></i> Finaliser
+            <button type="button" class="btn btn-success mb-2" id="finalizeBtn">
+                <i class="bi bi-check-circle mr-1"></i> Finaliser
             </button>
-        </div>
-    <% } %>
+        <% } %>
+        
+        <a href="/meetings/<%= meeting.id %>/calendar" class="btn btn-outline-primary mb-2">
+            <i class="bi bi-calendar-week mr-1"></i> Vue calendrier
+        </a>
+        <a href="/meetings/<%= meeting.id %>/documents" class="btn btn-outline-primary mb-2">
+            <i class="bi bi-file-earmark mr-1"></i> Documents
+        </a>
+        <a href="/meetings/<%= meeting.id %>/export-ics" class="btn btn-outline-success mb-2">
+            <i class="bi bi-calendar-plus mr-1"></i> Exporter ICS
+        </a>
+        <button type="button" class="btn btn-outline-primary mb-2" id="timezoneBtn">
+            <i class="bi bi-globe mr-1"></i> Fuseau horaire
+        </button>
+    </div>
 </div>
 
+<% if (meeting.is_finalized) { %>
+    <div class="alert alert-success mb-4">
+        <i class="bi bi-check-circle-fill mr-2"></i>
+        <strong>Cette réunion a été finalisée.</strong> Le créneau définitif a été choisi.
+    </div>
+<% } %>
+
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-lg-8 mb-4">
         <div class="card mb-4">
             <div class="card-header">
-                <h4>Informations</h4>
+                <h3 class="mb-0">Informations</h3>
             </div>
             <div class="card-body">
-                <% if (meeting.is_finalized) { %>
-                    <div class="alert alert-success">
-                        <strong>Cette réunion a été finalisée.</strong> Le créneau définitif a été choisi.
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <p class="mb-1 text-muted">Organisateur</p>
+                        <div class="d-flex align-items-center">
+                            <div style="width: 35px; height: 35px; background-color: rgba(37, 99, 235, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; border-radius: 50%; margin-right: 10px;">
+                                <i class="bi bi-person"></i>
+                            </div>
+                            <div>
+                                <strong><%= escapeHTML(meeting.organizer_first_name) %> <%= escapeHTML(meeting.organizer_last_name) %></strong><br>
+                                <small class="text-muted"><%= escapeHTML(meeting.organizer_email) %></small>
+                            </div>
+                        </div>
                     </div>
-                <% } %>
-                
-                <p><strong>Organisateur :</strong> <%= meeting.organizer_first_name %> <%= meeting.organizer_last_name %></p>
-                
-                <% if (meeting.description) { %>
-                    <p><strong>Description :</strong> <%= meeting.description %></p>
-                <% } %>
-                
-                <% if (meeting.location) { %>
-                    <p><strong>Lieu :</strong> <%= meeting.location %></p>
-                <% } %>
-                
-                <p><strong>Créée le :</strong> <%= new Date(meeting.created_at).toLocaleDateString('fr-FR') %></p>
+                    
+                    <div class="col-md-6 mb-3">
+                        <p class="mb-1 text-muted">Statut</p>
+                        <% if (meeting.is_finalized) { %>
+                            <span class="badge badge-success">
+                                <i class="bi bi-check-circle mr-1"></i>Finalisée
+                            </span>
+                        <% } else { %>
+                            <span class="badge badge-primary">
+                                <i class="bi bi-hourglass-split mr-1"></i>En attente de finalisation
+                            </span>
+                        <% } %>
+                    </div>
+                    
+                    <% if (meeting.description) { %>
+                        <div class="col-md-12 mb-3">
+                            <p class="mb-1 text-muted">Description</p>
+                            <p><%= escapeHTML(meeting.description) %></p>
+                        </div>
+                    <% } %>
+                    
+                    <% if (meeting.location) { %>
+                        <div class="col-md-6 mb-3">
+                            <p class="mb-1 text-muted">Lieu</p>
+                            <div class="d-flex align-items-center">
+                                <div style="width: 35px; height: 35px; background-color: rgba(37, 99, 235, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; border-radius: 50%; margin-right: 10px;">
+                                    <i class="bi bi-geo-alt"></i>
+                                </div>
+                                <div>
+                                    <strong><%= escapeHTML(meeting.location) %></strong>
+                                </div>
+                            </div>
+                        </div>
+                    <% } %>
+                    
+                    <div class="col-md-6 mb-3">
+                        <p class="mb-1 text-muted">Créée le</p>
+                        <div class="d-flex align-items-center">
+                            <div style="width: 35px; height: 35px; background-color: rgba(37, 99, 235, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; border-radius: 50%; margin-right: 10px;">
+                                <i class="bi bi-calendar"></i>
+                            </div>
+                            <div>
+                                <strong><%= new Date(meeting.created_at).toLocaleDateString('fr-FR') %></strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <div class="card mb-4">
-            <div class="card-header">
-                <h4>Créneaux proposés</h4>
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">Créneaux proposés</h3>
+                <% if (meeting.is_finalized) { %>
+                    <span class="badge badge-success">Créneau choisi</span>
+                <% } %>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <% if (timeslots && timeslots.length > 0) { %>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
+                    <div class="table-container">
+                        <table class="table table-hover mb-0">
                             <thead>
                                 <tr>
+                                    <th width="5%"></th>
                                     <th width="40%">Date et heure</th>
                                     <th width="30%">Disponibilités</th>
-                                    <th width="30%">Statut</th>
+                                    <th width="25%">Statut</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -70,31 +137,50 @@
                                     }
                                 %>
                                     <tr class="<%= isFinal ? 'table-success' : '' %>">
-                                        <td>
-                                            <%= startTime.toLocaleDateString('fr-FR') %> 
-                                            <%= startTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) %> - 
-                                            <%= endTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) %>
+                                        <td class="text-center">
+                                            <% if (isFinal) { %>
+                                                <i class="bi bi-check-circle-fill text-success" style="font-size: 1.2rem;"></i>
+                                            <% } %>
                                         </td>
                                         <td>
-                                            <div class="progress" style="height: 20px;">
-                                                <div class="progress-bar <%= availabilityPercent >= 70 ? 'bg-success' : (availabilityPercent >= 40 ? 'bg-warning' : 'bg-danger') %>" 
-                                                     role="progressbar" 
-                                                     style="width: <%= availabilityPercent %>%;" 
-                                                     aria-valuenow="<%= availabilityPercent %>" 
-                                                     aria-valuemin="0" 
-                                                     aria-valuemax="100">
-                                                    <%= availabilityPercent %>%
+                                            <div class="d-flex align-items-center">
+                                                <div style="width: 40px; height: 40px; background-color: <%= isFinal ? 'rgba(16, 185, 129, 0.1)' : 'rgba(37, 99, 235, 0.1)' %>; color: <%= isFinal ? 'var(--success)' : 'var(--primary)' %>; display: flex; align-items: center; justify-content: center; border-radius: 8px; margin-right: 10px;">
+                                                    <i class="bi bi-clock"></i>
+                                                </div>
+                                                <div>
+                                                    <strong><%= formatDateTime(startTime, 'ddd DD MMM YYYY', userTimezone) %></strong><br>
+                                                    <small><%= formatDateTime(startTime, 'HH:mm', userTimezone) %> - <%= formatDateTime(endTime, 'HH:mm', userTimezone) %></small>
                                                 </div>
                                             </div>
-                                            <small class="text-muted"><%= timeslot.available_count %> sur <%= timeslot.total_participants %> disponibles</small>
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 8px; margin-bottom: 5px; width: 100%;">
+                                                <div class="progress-bar <%= availabilityPercent >= 70 ? 'progress-bar-success' : (availabilityPercent >= 40 ? 'progress-bar-warning' : 'progress-bar-danger') %>" 
+                                                    role="progressbar" 
+                                                    style="width: <%= availabilityPercent %>%;" 
+                                                    aria-valuenow="<%= availabilityPercent %>" 
+                                                    aria-valuemin="0" 
+                                                    aria-valuemax="100">
+                                                </div>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; font-size: 0.8rem;">
+                                                <span style="margin-right: 0.5rem;"><%= timeslot.available_count %> sur <%= timeslot.total_participants %> disponibles</span>
+                                                <span><%= availabilityPercent %>%</span>
+                                            </div>
                                         </td>
                                         <td>
                                             <% if (isFinal) { %>
-                                                <span class="badge bg-success">Créneau choisi</span>
+                                                <span class="badge badge-success">
+                                                    <i class="bi bi-check-circle mr-1"></i>Créneau choisi
+                                                </span>
                                             <% } else if (meeting.is_finalized) { %>
-                                                <span class="badge bg-secondary">Non retenu</span>
+                                                <span class="badge badge-secondary">
+                                                    <i class="bi bi-x-circle mr-1"></i>Non retenu
+                                                </span>
                                             <% } else { %>
-                                                <span class="badge bg-primary">En attente</span>
+                                                <span class="badge badge-primary">
+                                                    <i class="bi bi-hourglass-split mr-1"></i>En attente
+                                                </span>
                                             <% } %>
                                         </td>
                                     </tr>
@@ -103,82 +189,343 @@
                         </table>
                     </div>
                 <% } else { %>
-                    <p class="text-muted">Aucun créneau proposé.</p>
+                    <div class="text-center p-4">
+                        <i class="bi bi-calendar-x" style="font-size: 2.5rem; color: var(--gray-400);"></i>
+                        <p class="mt-3 text-muted">Aucun créneau proposé pour cette réunion.</p>
+                    </div>
                 <% } %>
             </div>
         </div>
     </div>
     
-    <div class="col-md-4">
+    <div class="col-lg-4">
         <div class="card mb-4">
-            <div class="card-header">
-                <h4>Participants (<%= participants.length %>)</h4>
-            </div>
-            <div class="card-body">
-                <% if (participants && participants.length > 0) { %>
-                    <ul class="list-group">
-                        <% participants.forEach(participant => { %>
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <% if (participant.first_name && participant.last_name) { %>
-                                        <%= participant.first_name %> <%= participant.last_name %>
-                                        <small class="d-block text-muted"><%= participant.email %></small>
-                                    <% } else { %>
-                                        <%= participant.email %>
-                                    <% } %>
-                                </div>
-                                <% if (participant.has_responded) { %>
-                                    <span class="badge bg-success">A répondu</span>
-                                <% } else { %>
-                                    <span class="badge bg-warning text-dark">En attente</span>
-                                <% } %>
-                            </li>
-                        <% }); %>
-                    </ul>
-                <% } else { %>
-                    <p class="text-muted">Aucun participant.</p>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">Participants (<%= participants.length %>)</h3>
+                <% if (isOrganizer && !meeting.is_finalized) { %>
+                    <button class="btn btn-sm btn-outline-primary" onclick="addParticipantModal()">
+                        <i class="bi bi-plus-circle"></i>
+                    </button>
                 <% } %>
             </div>
+            <div class="card-body p-0">
+                <% if (participants && participants.length > 0) { %>
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        <% participants.forEach((participant, index) => { %>
+                            <div class="d-flex align-items-center p-3 <%= index < participants.length - 1 ? 'border-bottom' : '' %>">
+                                <div style="width: 40px; height: 40px; background-color: <%= participant.has_responded ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)' %>; color: <%= participant.has_responded ? 'var(--success)' : 'var(--warning)' %>; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin-right: 15px;">
+                                    <i class="bi <%= participant.has_responded ? 'bi-check-circle' : 'bi-hourglass-split' %>"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <% if (participant.first_name && participant.last_name) { %>
+                                        <strong><%= participant.first_name %> <%= participant.last_name %></strong>
+                                        <small class="d-block text-muted"><%= participant.email %></small>
+                                    <% } else { %>
+                                        <strong><%= participant.email %></strong>
+                                    <% } %>
+                                </div>
+                                <div>
+                                    <% if (participant.has_responded) { %>
+                                        <span class="badge badge-success">
+                                            <i class="bi bi-check-circle"></i>
+                                        </span>
+                                    <% } else { %>
+                                        <span class="badge badge-warning">
+                                            <i class="bi bi-hourglass-split"></i>
+                                        </span>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } else { %>
+                    <div class="text-center p-4">
+                        <i class="bi bi-people" style="font-size: 2.5rem; color: var(--gray-400);"></i>
+                        <p class="mt-3 text-muted">Aucun participant n'a encore été ajouté à cette réunion.</p>
+                    </div>
+                <% } %>
+            </div>
+            <% if (meeting.is_finalized) { %>
+                <div class="card-footer">
+                    <a href="/meetings/<%= meeting.id %>/export-ics" class="btn btn-outline-success btn-block">
+                        <i class="bi bi-calendar-plus mr-2"></i>Exporter au format ICS
+                    </a>
+                </div>
+            <% } %>
         </div>
+        
+    </div>
+</div>
+
+<!-- Modal Fuseau Horaire -->
+<div id="timezone-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; overflow-y: auto; padding: 1rem; box-sizing: border-box;">
+    <div style="background: white; border-radius: 0.5rem; width: 90%; max-width: 500px; padding: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); margin: auto; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h4 style="margin: 0;">Changer de fuseau horaire</h4>
+            <button id="closeTimezoneBtn" type="button" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+        
+        <form method="POST" action="/meetings/set-timezone">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="redirect_url" value="/meetings/<%= meeting.id %>">
+            
+            <div class="form-group mb-3">
+                <label for="timezone" class="form-label">Choisir un fuseau horaire</label>
+                <select class="form-select" id="timezone" name="timezone">
+                    <% const timezones = [
+                        'Europe/Paris', 'Europe/London', 'America/New_York', 'America/Los_Angeles', 
+                        'Asia/Tokyo', 'Australia/Sydney', 'Africa/Cairo'
+                    ]; %>
+                    
+                    <% timezones.forEach(tz => { %>
+                        <option value="<%= tz %>" <%= userTimezone === tz ? 'selected' : '' %>>
+                            <%= tz %>
+                        </option>
+                    <% }); %>
+                </select>
+                <div class="form-text">
+                    Tous les horaires seront affichés dans ce fuseau horaire.
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+                <button type="button" class="btn btn-outline-primary" id="cancelTimezoneBtn">Annuler</button>
+                <button type="submit" class="btn btn-primary">Appliquer</button>
+            </div>
+        </form>
     </div>
 </div>
 
 <% if (isOrganizer && !meeting.is_finalized && timeslots && timeslots.length > 0) { %>
     <!-- Modal de finalisation -->
-    <div class="modal fade" id="finalizeModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Finaliser la réunion</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Choisissez le créneau définitif pour cette réunion. Une notification sera envoyée à tous les participants.</p>
+    <div id="finalizeModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; overflow-y: auto; padding: 1rem;">
+        <div style="background: white; border-radius: 0.5rem; width: 90%; max-width: 500px; padding: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); margin: auto; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h4 style="margin: 0;">Finaliser la réunion</h4>
+                <button id="closeFinalizeBtn" type="button" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <p>Choisissez le créneau définitif pour cette réunion. Une notification sera envoyée à tous les participants.</p>
+                
+                <form action="/meetings/<%= meeting.id %>/finalize" method="POST" id="finalize-form">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     
-                    <form action="/meetings/<%= meeting.id %>/finalize" method="POST" id="finalize-form">
-                        <% timeslots.forEach(timeslot => { 
-                            const startTime = new Date(timeslot.start_time);
-                            const endTime = new Date(timeslot.end_time);
-                        %>
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="radio" name="timeslot_id" id="timeslot_<%= timeslot.id %>" value="<%= timeslot.id %>" required>
-                                <label class="form-check-label" for="timeslot_<%= timeslot.id %>">
-                                    <%= startTime.toLocaleDateString('fr-FR') %> 
-                                    <%= startTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) %> - 
-                                    <%= endTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) %>
-                                    <small class="d-block text-muted"><%= timeslot.available_count %> sur <%= timeslot.total_participants %> disponibles</small>
-                                </label>
+                    <% timeslots.forEach(timeslot => { 
+                        const startTime = new Date(timeslot.start_time);
+                        const endTime = new Date(timeslot.end_time);
+                        
+                        // Calculer le pourcentage de disponibilité
+                        let availabilityPercent = 0;
+                        if (timeslot.total_participants > 0) {
+                            availabilityPercent = Math.round((timeslot.available_count / timeslot.total_participants) * 100);
+                        }
+                    %>
+                        <div class="card mb-3" style="cursor: pointer;" onclick="selectTimeslot('<%= timeslot.id %>')">
+                            <div class="card-body p-3">
+                                <div class="form-check d-flex">
+                                    <input class="form-check-input mt-2" type="radio" name="timeslot_id" id="timeslot_<%= timeslot.id %>" value="<%= timeslot.id %>" required style="margin-right: 15px;">
+                                    <div style="flex: 1;">
+                                        <label class="form-check-label" for="timeslot_<%= timeslot.id %>" style="cursor: pointer; display: block;">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <div style="width: 35px; height: 35px; background-color: rgba(37, 99, 235, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; border-radius: 8px; margin-right: 10px;">
+                                                    <i class="bi bi-clock"></i>
+                                                </div>
+                                                <div>
+                                                    <strong><%= formatDateTime(startTime, 'ddd DD MMM YYYY', userTimezone) %></strong><br>
+                                                    <small><%= formatDateTime(startTime, 'HH:mm', userTimezone) %> - <%= formatDateTime(endTime, 'HH:mm', userTimezone) %></small>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="progress" style="height: 8px; margin-bottom: 5px; width: 100%;">
+                                                <div class="progress-bar <%= availabilityPercent >= 70 ? 'progress-bar-success' : (availabilityPercent >= 40 ? 'progress-bar-warning' : 'progress-bar-danger') %>" 
+                                                    role="progressbar" 
+                                                    style="width: <%= availabilityPercent %>%;">
+                                                </div>
+                                            </div>
+                                            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; font-size: 0.8rem;">
+                                                <span style="margin-right: 0.5rem;"><%= timeslot.available_count %> sur <%= timeslot.total_participants %> disponibles</span>
+                                                <span><%= availabilityPercent %>%</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
-                        <% }); %>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" form="finalize-form" class="btn btn-success">Confirmer</button>
-                </div>
+                        </div>
+                    <% }); %>
+                </form>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+                <button type="button" class="btn btn-outline-primary" id="cancelFinalizeBtn">Annuler</button>
+                <button type="submit" form="finalize-form" class="btn btn-success" id="submitFinalizeForm">Confirmer</button>
             </div>
         </div>
     </div>
 <% } %>
+
+<script>
+    // Écouter les clics directement sur le document
+    document.addEventListener('click', function(event) {
+        // Bouton fuseau horaire
+        if (event.target.id === 'timezoneBtn' || event.target.closest('#timezoneBtn')) {
+            console.log('Clic capturé sur le bouton fuseau horaire');
+            openTimezoneModal();
+        }
+        
+        // Bouton finaliser
+        if (event.target.id === 'finalizeBtn' || event.target.closest('#finalizeBtn')) {
+            console.log('Clic capturé sur le bouton finaliser');
+            openFinalizeModal();
+        }
+    });
+    
+    // Utilisation des fonctions communes définies dans script.js
+    
+    // Modal fuseau horaire
+    function openTimezoneModal() {
+        console.log('Tentative d\'ouverture du modal de fuseau horaire');
+        const modal = document.getElementById('timezone-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            console.log('Modal de fuseau horaire ouvert');
+        } else {
+            console.error('Modal de fuseau horaire non trouvé');
+        }
+    }
+    
+    function closeTimezoneModal() {
+        console.log('Tentative de fermeture du modal de fuseau horaire');
+        const modal = document.getElementById('timezone-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            console.log('Modal de fuseau horaire fermé');
+        } else {
+            console.error('Modal de fuseau horaire non trouvé');
+        }
+    }
+    
+    // Ajouter des écouteurs d'événements pour les boutons du modal
+    document.addEventListener('DOMContentLoaded', function() {
+        // Bouton X (croix) du modal fuseau horaire
+        const closeBtn = document.getElementById('closeTimezoneBtn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Clic sur la croix du modal fuseau horaire');
+                closeTimezoneModal();
+            });
+        }
+        
+        // Bouton Annuler du modal fuseau horaire
+        const cancelBtn = document.getElementById('cancelTimezoneBtn');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Clic sur Annuler du modal fuseau horaire');
+                closeTimezoneModal();
+            });
+        }
+        
+        // Fermer le modal quand on clique en dehors
+        const timezoneModal = document.getElementById('timezone-modal');
+        if (timezoneModal) {
+            timezoneModal.addEventListener('click', function(e) {
+                // Si on clique sur le fond mais pas sur le contenu du modal
+                if (e.target === timezoneModal) {
+                    closeTimezoneModal();
+                }
+            });
+        }
+    });
+    
+    // Modal finalisation
+    function openFinalizeModal() {
+        console.log('Tentative d\'ouverture du modal de finalisation');
+        const modal = document.getElementById('finalizeModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            console.log('Modal de finalisation ouvert');
+        } else {
+            console.error('Modal de finalisation non trouvé');
+            // Afficher tous les IDs disponibles pour le debugging
+            console.log('IDs disponibles:', Array.from(document.querySelectorAll('[id]')).map(el => el.id).join(', '));
+        }
+    }
+    
+    function closeFinalizeModal() {
+        const modal = document.getElementById('finalizeModal');
+        if (modal) {
+            modal.style.display = 'none';
+            console.log('Modal de finalisation fermé');
+        } else {
+            console.error('Modal de finalisation non trouvé');
+        }
+    }
+    
+    function selectTimeslot(id) {
+        document.getElementById('timeslot_' + id).checked = true;
+    }
+    
+    // S'assurer que le formulaire de finalisation est soumis correctement
+    document.addEventListener('DOMContentLoaded', function() {
+        // Bouton X (croix) du modal finaliser
+        const closeFinalizeBtn = document.getElementById('closeFinalizeBtn');
+        if (closeFinalizeBtn) {
+            closeFinalizeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Clic sur la croix du modal finaliser');
+                closeFinalizeModal();
+            });
+        }
+        
+        // Bouton Annuler du modal finaliser
+        const cancelFinalizeBtn = document.getElementById('cancelFinalizeBtn');
+        if (cancelFinalizeBtn) {
+            cancelFinalizeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Clic sur Annuler du modal finaliser');
+                closeFinalizeModal();
+            });
+        }
+        
+        // Fermer le modal quand on clique en dehors
+        const finalizeModal = document.getElementById('finalizeModal');
+        if (finalizeModal) {
+            finalizeModal.addEventListener('click', function(e) {
+                // Si on clique sur le fond mais pas sur le contenu du modal
+                if (e.target === finalizeModal) {
+                    closeFinalizeModal();
+                }
+            });
+        }
+        
+        // Gérer la soumission du formulaire
+        const submitBtn = document.getElementById('submitFinalizeForm');
+        if (submitBtn) {
+            submitBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Tentative de soumission du formulaire de finalisation');
+                const form = document.getElementById('finalize-form');
+                if (form) {
+                    // Vérifier qu'un créneau est sélectionné
+                    const radios = form.querySelectorAll('input[type="radio"]:checked');
+                    if (radios.length === 0) {
+                        alert('Veuillez sélectionner un créneau');
+                        return;
+                    }
+                    console.log('Soumission du formulaire de finalisation');
+                    form.submit();
+                } else {
+                    console.error('Formulaire de finalisation non trouvé');
+                }
+            });
+        }
+    });
+</script>
 
 <%- include('../../partials/footer') %>

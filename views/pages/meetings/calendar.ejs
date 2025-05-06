@@ -1,0 +1,430 @@
+<%- include('../../partials/header') %>
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+    <h1 class="mb-3 mb-md-0">Calendrier - <%= meeting.title %></h1>
+    
+    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+        <div style="position: relative;">
+            <button type="button" class="btn btn-outline-primary mb-2" onclick="toggleTimeZoneDropdown()">
+                <i class="bi bi-globe mr-1"></i> Fuseau horaire
+            </button>
+            <div class="dropdown-menu" id="timezoneDropdownMenu" style="display: none; position: absolute; top: 100%; right: 0; z-index: 100; background: white; border-radius: 0.5rem; box-shadow: var(--shadow-md); min-width: 10rem; padding: 1rem; margin-top: 0.5rem;">
+            <form method="POST" action="/meetings/set-timezone">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="redirect_url" value="/meetings/<%= meeting.id %>/calendar">
+                
+                <div class="mb-3">
+                    <label for="timezone" class="form-label">Choisir un fuseau horaire</label>
+                    <select class="form-select" id="timezone" name="timezone">
+                        <% commonTimezones.forEach(tz => { %>
+                            <option value="<%= tz %>" <%= userTimezone === tz ? 'selected' : '' %>>
+                                <%= tz %>
+                            </option>
+                        <% }); %>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-sm">Appliquer</button>
+            </form>
+        </div>
+        </div>
+        
+        <% if (isOrganizer && !meeting.is_finalized) { %>
+            <a href="/meetings/<%= meeting.id %>/edit" class="btn btn-outline-primary mb-2">
+                <i class="bi bi-pencil mr-1"></i> Modifier
+            </a>
+            <button type="button" class="btn btn-success mb-2" id="finalizeBtn">
+                <i class="bi bi-check-circle mr-1"></i> Finaliser
+            </button>
+        <% } %>
+        
+        <a href="/meetings/<%= meeting.id %>" class="btn btn-outline-primary mb-2">
+            <i class="bi bi-info-circle mr-1"></i> Vue détaillée
+        </a>
+        <a href="/meetings/<%= meeting.id %>/documents" class="btn btn-outline-primary mb-2">
+            <i class="bi bi-file-earmark-text mr-1"></i> Documents
+        </a>
+        <a href="/meetings/<%= meeting.id %>/export-ics" class="btn btn-outline-success mb-2">
+            <i class="bi bi-calendar-plus mr-1"></i> Exporter ICS
+        </a>
+    </div>
+</div>
+
+<!-- Vue calendrier -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Calendrier des disponibilités</h4>
+    </div>
+    <div class="card-body">
+        <% if (Object.keys(calendarDays).length > 0) { %>
+            <!-- En-têtes des jours de la semaine -->
+            <div class="calendar-grid mb-2">
+                <div class="calendar-day-header">Lundi</div>
+                <div class="calendar-day-header">Mardi</div>
+                <div class="calendar-day-header">Mercredi</div>
+                <div class="calendar-day-header">Jeudi</div>
+                <div class="calendar-day-header">Vendredi</div>
+                <div class="calendar-day-header">Samedi</div>
+                <div class="calendar-day-header">Dimanche</div>
+            </div>
+            
+            <!-- Grille du calendrier -->
+            <div class="calendar-grid">
+                <% 
+                // Déterminer la première date du calendrier (lundi de la semaine de la première date)
+                const dates = Object.keys(calendarDays).sort();
+                const firstDate = new Date(dates[0]);
+                const firstDay = firstDate.getDay() || 7; // Si dimanche (0), on utilise 7
+                const mondayOfFirstWeek = new Date(firstDate);
+                mondayOfFirstWeek.setDate(firstDate.getDate() - (firstDay - 1));
+                
+                // Déterminer la dernière date du calendrier
+                const lastDate = new Date(dates[dates.length - 1]);
+                const lastDay = lastDate.getDay() || 7;
+                const sundayOfLastWeek = new Date(lastDate);
+                sundayOfLastWeek.setDate(lastDate.getDate() + (7 - lastDay));
+                
+                // Nombre de jours à afficher
+                const totalDays = Math.ceil((sundayOfLastWeek - mondayOfFirstWeek) / (24 * 60 * 60 * 1000)) + 1;
+                
+                // Générer chaque jour du calendrier
+                for (let i = 0; i < totalDays; i++) {
+                    const currentDate = new Date(mondayOfFirstWeek);
+                    currentDate.setDate(mondayOfFirstWeek.getDate() + i);
+                    
+                    const dateKey = currentDate.toISOString().split('T')[0];
+                    const isToday = new Date().toISOString().split('T')[0] === dateKey;
+                    const hasTimeslots = calendarDays[dateKey] !== undefined;
+                %>
+                    <div class="calendar-day <%= isToday ? 'today' : '' %>">
+                        <div class="calendar-day-number">
+                            <%= formatDate(currentDate, 'DD/MM') %>
+                        </div>
+                        
+                        <% if (hasTimeslots) { %>
+                            <% calendarDays[dateKey].timeslots.forEach(timeslot => { 
+                                // Calculer le pourcentage de disponibilité
+                                const stats = availabilityStats.find(s => s.timeslot_id === timeslot.id);
+                                let availabilityPercent = 0;
+                                if (stats && stats.total_participants > 0) {
+                                    availabilityPercent = Math.round((stats.available_count / stats.total_participants) * 100);
+                                }
+                                
+                                const isFinal = meeting.is_finalized && meeting.final_timeslot_id == timeslot.id;
+                                const startTime = new Date(timeslot.start_time);
+                                const endTime = new Date(timeslot.end_time);
+                            %>
+                                <div class="calendar-event mb-2 p-2 rounded <%= isFinal ? 'bg-success text-white' : (availabilityPercent >= 70 ? 'bg-success text-white' : (availabilityPercent >= 40 ? 'bg-warning' : 'bg-danger text-white')) %>">
+                                    <div class="small">
+                                        <%= formatDateTime(startTime, 'HH:mm', userTimezone) %> - 
+                                        <%= formatDateTime(endTime, 'HH:mm', userTimezone) %>
+                                    </div>
+                                    <div class="small mt-1">
+                                        <% if (isFinal) { %>
+                                            <i class="bi bi-check-circle-fill"></i> Confirmé
+                                        <% } else { %>
+                                            <%= availabilityPercent %>% disponibles
+                                        <% } %>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        <% } %>
+                    </div>
+                <% } %>
+            </div>
+        <% } else { %>
+            <p class="text-muted">Aucun créneau proposé.</p>
+        <% } %>
+    </div>
+</div>
+
+<!-- Disponibilités globales -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Disponibilités par créneau</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date et heure</th>
+                                <th>Disponibilité</th>
+                                <th>Détails</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% availabilityStats.forEach(stats => { 
+                                const startTime = new Date(stats.start_time);
+                                const endTime = new Date(stats.end_time);
+                                const isFinal = meeting.is_finalized && meeting.final_timeslot_id == stats.timeslot_id;
+                                
+                                // Calculer le pourcentage de disponibilité
+                                let availabilityPercent = 0;
+                                if (stats.total_participants > 0) {
+                                    availabilityPercent = Math.round((parseInt(stats.available_count) / parseInt(stats.total_participants)) * 100);
+                                }
+                            %>
+                                <tr class="<%= isFinal ? 'table-success' : '' %>">
+                                    <td>
+                                        <%= formatDateTime(startTime, 'DD/MM/YYYY HH:mm', userTimezone) %> - 
+                                        <%= formatDateTime(endTime, 'HH:mm', userTimezone) %>
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar <%= availabilityPercent >= 70 ? 'bg-success' : (availabilityPercent >= 40 ? 'bg-warning' : 'bg-danger') %>" 
+                                                role="progressbar" 
+                                                style="width: <%= availabilityPercent %>%;" 
+                                                aria-valuenow="<%= availabilityPercent %>" 
+                                                aria-valuemin="0" 
+                                                aria-valuemax="100">
+                                                <%= availabilityPercent %>%
+                                            </div>
+                                        </div>
+                                        <small class="text-muted"><%= stats.available_count %> sur <%= stats.total_participants %> disponibles</small>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-info" onclick="openDetailsModal(<%= stats.timeslot_id %>)">
+                                            <i class="bi bi-info-circle"></i> Détails
+                                        </button>
+                                        <% if (isFinal) { %>
+                                            <span class="badge badge-success">Confirmé</span>
+                                        <% } %>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Modal pour les détails des participants -->
+                                <div id="detailsModal<%= stats.timeslot_id %>" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; overflow-y: auto; padding: 1rem;">
+                                    <div style="background: white; border-radius: 0.5rem; width: 90%; max-width: 500px; padding: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); margin: auto; max-height: 90vh; overflow-y: auto;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                            <h4 style="margin: 0;">Détails des disponibilités</h4>
+                                            <button onclick="closeDetailsModal(<%= stats.timeslot_id %>)" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </div>
+                                        
+                                        <div style="margin-bottom: 1.5rem;">
+                                            <p>
+                                                <strong>Date et heure :</strong> 
+                                                <%= formatDateTime(startTime, 'DD/MM/YYYY HH:mm', userTimezone) %> - 
+                                                <%= formatDateTime(endTime, 'HH:mm', userTimezone) %>
+                                            </p>
+                                            
+                                            <h6>Disponibilités par participant :</h6>
+                                            <div class="list-group">
+                                                <% participants.forEach(participant => { 
+                                                    // Vérifier la disponibilité de ce participant pour ce créneau
+                                                    const response = participant.responses.find(r => r.timeslot_id === stats.timeslot_id);
+                                                    const isAvailable = response ? response.availability : false;
+                                                    const hasResponded = response !== undefined;
+                                                %>
+                                                    <div class="list-group-item list-group-item-action flex-column align-items-start">
+                                                        <div class="d-flex w-100 justify-content-between">
+                                                            <h6 class="mb-1">
+                                                                <% if (participant.first_name && participant.last_name) { %>
+                                                                    <%= participant.first_name %> <%= participant.last_name %>
+                                                                <% } else { %>
+                                                                    <%= participant.email %>
+                                                                <% } %>
+                                                            </h6>
+                                                            <% if (hasResponded) { %>
+                                                                <span class="badge badge-<%= isAvailable ? 'success' : 'danger' %>">
+                                                                    <%= isAvailable ? 'Disponible' : 'Non disponible' %>
+                                                                </span>
+                                                            <% } else { %>
+                                                                <span class="badge badge-secondary">Pas de réponse</span>
+                                                            <% } %>
+                                                        </div>
+                                                        <% if (hasResponded && response.comment) { %>
+                                                            <p class="mb-1 small text-muted"><%= response.comment %></p>
+                                                        <% } %>
+                                                        <small class="text-muted"><%= participant.email %></small>
+                                                    </div>
+                                                <% }); %>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+                                            <button type="button" class="btn btn-outline-primary" onclick="closeDetailsModal(<%= stats.timeslot_id %>)">Fermer</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+    </div>
+</div>
+
+<% if (isOrganizer && !meeting.is_finalized && availabilityStats.length > 0) { %>
+    <!-- Modal de finalisation (copié de la vue détails) -->
+    <div id="finalizeModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; overflow-y: auto; padding: 1rem;">
+        <div style="background: white; border-radius: 0.5rem; width: 90%; max-width: 500px; padding: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); margin: auto; max-height: 90vh; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 style="margin: 0;">Finaliser la réunion</h4>
+                    <button type="button" id="closeFinalizeBtn" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <p>Choisissez le créneau définitif pour cette réunion. Une notification sera envoyée à tous les participants.</p>
+                    
+                    <form action="/meetings/<%= meeting.id %>/finalize" method="POST" id="finalize-form">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        
+                        <% availabilityStats.forEach(stats => { 
+                            const startTime = new Date(stats.start_time);
+                            const endTime = new Date(stats.end_time);
+                            
+                            // Calculer le pourcentage de disponibilité
+                            let availabilityPercent = 0;
+                            if (stats.total_participants > 0) {
+                                availabilityPercent = Math.round((parseInt(stats.available_count) / parseInt(stats.total_participants)) * 100);
+                            }
+                        %>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="timeslot_id" id="timeslot_<%= stats.timeslot_id %>" value="<%= stats.timeslot_id %>" required>
+                                <label class="form-check-label" for="timeslot_<%= stats.timeslot_id %>">
+                                    <%= formatDateTime(startTime, 'DD/MM/YYYY HH:mm', userTimezone) %> - 
+                                    <%= formatDateTime(endTime, 'HH:mm', userTimezone) %>
+                                    <div class="progress mt-1" style="height: 10px;">
+                                        <div class="progress-bar <%= availabilityPercent >= 70 ? 'bg-success' : (availabilityPercent >= 40 ? 'bg-warning' : 'bg-danger') %>" 
+                                             style="width: <%= availabilityPercent %>%;">
+                                        </div>
+                                    </div>
+                                    <small class="d-block text-muted"><%= stats.available_count %> sur <%= stats.total_participants %> disponibles</small>
+                                </label>
+                            </div>
+                        <% }); %>
+                    </form>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+                    <button type="button" class="btn btn-outline-primary" id="cancelFinalizeBtn">Annuler</button>
+                    <button type="submit" form="finalize-form" class="btn btn-success" id="submitFinalizeForm">Confirmer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+<% } %>
+
+<script>
+    // Écouter les clics directement sur le document
+    document.addEventListener('click', function(event) {
+        // Bouton finaliser
+        if (event.target.id === 'finalizeBtn' || event.target.closest('#finalizeBtn')) {
+            console.log('Clic capturé sur le bouton finaliser');
+            openFinalizeModal();
+        }
+    });
+    
+    // Utilisation des fonctions communes définies dans script.js
+    
+    function toggleTimeZoneDropdown() {
+        console.log('Tentative d\'ouverture du dropdown de fuseau horaire');
+        const dropdown = document.getElementById('timezoneDropdownMenu');
+        if (dropdown) {
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+            console.log('Dropdown de fuseau horaire:', dropdown.style.display);
+        } else {
+            console.error('Dropdown de fuseau horaire non trouvé');
+        }
+    }
+    
+    // Fonctions pour les modals
+    function openFinalizeModal() {
+        console.log('Tentative d\'ouverture du modal de finalisation (calendrier)');
+        const modal = document.getElementById('finalizeModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            console.log('Modal de finalisation ouvert (calendrier)');
+        } else {
+            console.error('Modal de finalisation non trouvé (calendrier)');
+            // Afficher tous les IDs disponibles pour le debugging
+            console.log('IDs disponibles:', Array.from(document.querySelectorAll('[id]')).map(el => el.id).join(', '));
+        }
+    }
+    
+    function closeFinalizeModal() {
+        const modal = document.getElementById('finalizeModal');
+        if (modal) {
+            modal.style.display = 'none';
+            console.log('Modal de finalisation fermé (calendrier)');
+        } else {
+            console.error('Modal de finalisation non trouvé (calendrier)');
+        }
+    }
+    
+    // Gestion des modals de détails
+    function openDetailsModal(id) {
+        openModal('detailsModal' + id);
+    }
+    
+    function closeDetailsModal(id) {
+        closeModal('detailsModal' + id);
+    }
+    
+    // S'assurer que le formulaire de finalisation est soumis correctement
+    document.addEventListener('DOMContentLoaded', function() {
+        // Bouton X (croix) du modal finaliser
+        const closeFinalizeBtn = document.getElementById('closeFinalizeBtn');
+        if (closeFinalizeBtn) {
+            closeFinalizeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Clic sur la croix du modal finaliser (calendrier)');
+                closeFinalizeModal();
+            });
+        }
+        
+        // Bouton Annuler du modal finaliser
+        const cancelFinalizeBtn = document.getElementById('cancelFinalizeBtn');
+        if (cancelFinalizeBtn) {
+            cancelFinalizeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Clic sur Annuler du modal finaliser (calendrier)');
+                closeFinalizeModal();
+            });
+        }
+        
+        // Fermer le modal quand on clique en dehors
+        const finalizeModal = document.getElementById('finalizeModal');
+        if (finalizeModal) {
+            finalizeModal.addEventListener('click', function(e) {
+                // Si on clique sur le fond mais pas sur le contenu du modal
+                if (e.target === finalizeModal) {
+                    closeFinalizeModal();
+                }
+            });
+        }
+        
+        // Gérer la soumission du formulaire
+        const submitBtn = document.getElementById('submitFinalizeForm');
+        if (submitBtn) {
+            submitBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Tentative de soumission du formulaire de finalisation (calendrier)');
+                const form = document.getElementById('finalize-form');
+                if (form) {
+                    // Vérifier qu'un créneau est sélectionné
+                    const radios = form.querySelectorAll('input[type="radio"]:checked');
+                    if (radios.length === 0) {
+                        alert('Veuillez sélectionner un créneau');
+                        return;
+                    }
+                    console.log('Soumission du formulaire de finalisation (calendrier)');
+                    form.submit();
+                } else {
+                    console.error('Formulaire de finalisation non trouvé (calendrier)');
+                }
+            });
+        }
+    });
+</script>
+
+<%- include('../../partials/footer') %>

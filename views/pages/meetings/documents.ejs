@@ -1,0 +1,345 @@
+<%- include('../../partials/header') %>
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+    <h1 class="mb-3 mb-md-0">Documents - <%= meeting.title %></h1>
+    
+    <a href="/meetings/<%= meeting.id %>" class="btn btn-outline-primary">
+        <i class="bi bi-arrow-left mr-2"></i>Retour à la réunion
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">Documents partagés</h3>
+                <span class="badge badge-primary"><%= documents ? documents.length : 0 %> documents</span>
+            </div>
+            <div class="card-body p-0">
+                <% if (documents && documents.length > 0) { %>
+                    <div class="table-container">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50%">Nom du fichier</th>
+                                    <th style="width: 20%">Ajouté par</th>
+                                    <th style="width: 15%">Date</th>
+                                    <th style="width: 15%">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% documents.forEach(doc => { 
+                                    const createdAt = new Date(doc.created_at);
+                                    const fileSize = doc.file_size < 1024 * 1024 
+                                        ? Math.round(doc.file_size / 1024) + ' KB' 
+                                        : Math.round(doc.file_size / (1024 * 1024) * 10) / 10 + ' MB';
+                                    
+                                    // Déterminer l'icône en fonction du type de fichier
+                                    let fileIcon = 'bi-file-earmark';
+                                    const fileName = doc.original_name.toLowerCase();
+                                    if (fileName.endsWith('.pdf')) {
+                                        fileIcon = 'bi-file-earmark-pdf';
+                                    } else if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) {
+                                        fileIcon = 'bi-file-earmark-word';
+                                    } else if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) {
+                                        fileIcon = 'bi-file-earmark-excel';
+                                    } else if (fileName.endsWith('.ppt') || fileName.endsWith('.pptx')) {
+                                        fileIcon = 'bi-file-earmark-ppt';
+                                    } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png')) {
+                                        fileIcon = 'bi-file-earmark-image';
+                                    } else if (fileName.endsWith('.txt')) {
+                                        fileIcon = 'bi-file-earmark-text';
+                                    }
+                                %>
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background-color: rgba(37, 99, 235, 0.1); color: var(--primary); border-radius: 8px; margin-right: 10px;">
+                                                    <i class="bi <%= fileIcon %>" style="font-size: 1.2rem;"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-truncate" style="max-width: 350px;"><%= escapeHTML(doc.original_name) %></div>
+                                                    <small class="text-muted"><%= fileSize %></small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <% if (doc.first_name && doc.last_name) { %>
+                                                <div class="d-flex align-items-center">
+                                                    <div style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background-color: rgba(100, 116, 139, 0.1); color: var(--secondary); border-radius: 50%; margin-right: 8px;">
+                                                        <span style="font-size: 0.8rem; font-weight: bold;"><%= doc.first_name.charAt(0) %><%= doc.last_name.charAt(0) %></span>
+                                                    </div>
+                                                    <div class="text-truncate" style="max-width: 150px;">
+                                                        <%= escapeHTML(doc.first_name) %> <%= escapeHTML(doc.last_name) %>
+                                                    </div>
+                                                </div>
+                                            <% } else { %>
+                                                <span class="text-muted">Utilisateur inconnu</span>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <%= formatDate(createdAt, 'DD/MM/YYYY') %>
+                                            <div class="text-muted" style="font-size: 0.8rem;"><%= formatDate(createdAt, 'HH:mm') %></div>
+                                        </td>
+                                        <td>
+                                            <a href="/meetings/<%= meeting.id %>/documents/<%= doc.id %>" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-download mr-1"></i>Télécharger
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } else { %>
+                    <div class="text-center p-5">
+                        <i class="bi bi-file-earmark-x" style="font-size: 3rem; color: var(--gray-400);"></i>
+                        <h4 class="mt-3">Aucun document</h4>
+                        <p class="text-muted">
+                            Aucun document n'a encore été partagé pour cette réunion.
+                        </p>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="mb-0">Partager un document</h3>
+            </div>
+            <div class="card-body">
+                <form action="/meetings/<%= meeting.id %>/upload-document" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    
+                    <div class="form-group mb-4">
+                        <label for="document" class="form-label">Sélectionner un fichier</label>
+                        <div class="custom-file-upload">
+                            <div class="file-upload-placeholder" id="fileUploadPlaceholder">
+                                <div style="text-align: center; padding: 2rem;">
+                                    <i class="bi bi-cloud-arrow-up" style="font-size: 2.5rem; color: var(--gray-400);"></i>
+                                    <p class="mt-2 mb-0">Glissez-déposez un fichier ici ou cliquez pour naviguer</p>
+                                </div>
+                                <input class="form-control" type="file" id="document" name="document" required style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer;">
+                            </div>
+                            <div id="filePreview" style="display: none; padding: 1rem; border: 1px dashed var(--gray-300); border-radius: var(--border-radius);">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-file-earmark mr-2" style="font-size: 2rem; color: var(--primary);"></i>
+                                    <div style="flex: 1;">
+                                        <p class="mb-0" id="fileName">nom_de_fichier.ext</p>
+                                        <small class="text-muted" id="fileSize">0 KB</small>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-link text-danger" id="removeFile">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-text mt-2">
+                            <p class="mb-1">Formats acceptés:</p>
+                            <div class="d-flex flex-wrap">
+                                <span class="badge badge-primary mr-1 mb-1">PDF</span>
+                                <span class="badge badge-primary mr-1 mb-1">Word</span>
+                                <span class="badge badge-primary mr-1 mb-1">Excel</span>
+                                <span class="badge badge-primary mr-1 mb-1">PowerPoint</span>
+                                <span class="badge badge-primary mr-1 mb-1">Images</span>
+                                <span class="badge badge-primary mr-1 mb-1">Texte</span>
+                            </div>
+                            <p class="mt-1 mb-0">Taille maximale: 5 MB</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; width: 100%;">
+                        <button type="submit" class="btn btn-primary" id="uploadButton" disabled>
+                            <i class="bi bi-upload mr-2"></i>Uploader le document
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0">Informations sur la réunion</h3>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background-color: rgba(37, 99, 235, 0.1); color: var(--primary); border-radius: 50%; margin-right: 10px;">
+                        <i class="bi bi-calendar-event"></i>
+                    </div>
+                    <div>
+                        <p class="mb-0 text-muted">Titre</p>
+                        <strong><%= escapeHTML(meeting.title) %></strong>
+                    </div>
+                </div>
+                
+                <% if (meeting.description) { %>
+                    <div class="d-flex align-items-start mb-3">
+                        <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background-color: rgba(37, 99, 235, 0.1); color: var(--primary); border-radius: 50%; margin-right: 10px;">
+                            <i class="bi bi-card-text"></i>
+                        </div>
+                        <div>
+                            <p class="mb-0 text-muted">Description</p>
+                            <p class="mb-0"><%= escapeHTML(meeting.description) %></p>
+                        </div>
+                    </div>
+                <% } %>
+                
+                <% if (meeting.location) { %>
+                    <div class="d-flex align-items-center mb-3">
+                        <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background-color: rgba(37, 99, 235, 0.1); color: var(--primary); border-radius: 50%; margin-right: 10px;">
+                            <i class="bi bi-geo-alt"></i>
+                        </div>
+                        <div>
+                            <p class="mb-0 text-muted">Lieu</p>
+                            <strong><%= escapeHTML(meeting.location) %></strong>
+                        </div>
+                    </div>
+                <% } %>
+                
+                <div class="d-flex align-items-center mb-3">
+                    <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background-color: rgba(37, 99, 235, 0.1); color: var(--primary); border-radius: 50%; margin-right: 10px;">
+                        <i class="bi bi-person"></i>
+                    </div>
+                    <div>
+                        <p class="mb-0 text-muted">Organisateur</p>
+                        <strong><%= escapeHTML(meeting.organizer_first_name) %> <%= escapeHTML(meeting.organizer_last_name) %></strong>
+                    </div>
+                </div>
+                
+                <% if (meeting.is_finalized) { %>
+                    <div class="alert alert-success mt-3">
+                        <strong>Cette réunion a été finalisée.</strong>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('document');
+        const filePreview = document.getElementById('filePreview');
+        const fileUploadPlaceholder = document.getElementById('fileUploadPlaceholder');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const removeFile = document.getElementById('removeFile');
+        const uploadButton = document.getElementById('uploadButton');
+        
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Le fichier est trop volumineux. La taille maximale est de 5 MB.');
+                    this.value = '';
+                    return;
+                }
+                
+                fileName.textContent = file.name;
+                
+                const size = file.size;
+                if (size < 1024) {
+                    fileSize.textContent = size + ' B';
+                } else if (size < 1024 * 1024) {
+                    fileSize.textContent = Math.round(size / 1024) + ' KB';
+                } else {
+                    fileSize.textContent = Math.round((size / (1024 * 1024)) * 10) / 10 + ' MB';
+                }
+                
+                filePreview.style.display = 'block';
+                fileUploadPlaceholder.style.display = 'none';
+                uploadButton.disabled = false;
+                
+                const fileIconElement = filePreview.querySelector('.bi');
+                const fileName = file.name.toLowerCase();
+                
+                if (fileName.endsWith('.pdf')) {
+                    fileIconElement.className = 'bi bi-file-earmark-pdf mr-2';
+                } else if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) {
+                    fileIconElement.className = 'bi bi-file-earmark-word mr-2';
+                } else if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) {
+                    fileIconElement.className = 'bi bi-file-earmark-excel mr-2';
+                } else if (fileName.endsWith('.ppt') || fileName.endsWith('.pptx')) {
+                    fileIconElement.className = 'bi bi-file-earmark-ppt mr-2';
+                } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png')) {
+                    fileIconElement.className = 'bi bi-file-earmark-image mr-2';
+                } else if (fileName.endsWith('.txt')) {
+                    fileIconElement.className = 'bi bi-file-earmark-text mr-2';
+                } else {
+                    fileIconElement.className = 'bi bi-file-earmark mr-2';
+                }
+            }
+        });
+        
+        removeFile.addEventListener('click', function() {
+            fileInput.value = '';
+            filePreview.style.display = 'none';
+            fileUploadPlaceholder.style.display = 'block';
+            uploadButton.disabled = true;
+        });
+        
+        const dropArea = fileUploadPlaceholder;
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight() {
+            dropArea.style.borderColor = 'var(--primary)';
+            dropArea.style.backgroundColor = 'rgba(37, 99, 235, 0.05)';
+        }
+        
+        function unhighlight() {
+            dropArea.style.borderColor = 'var(--gray-300)';
+            dropArea.style.backgroundColor = 'white';
+        }
+        
+        dropArea.addEventListener('drop', handleDrop, false);
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+            
+            const event = new Event('change');
+            fileInput.dispatchEvent(event);
+        }
+    });
+</script>
+
+<style>
+    .custom-file-upload {
+        position: relative;
+    }
+    
+    .file-upload-placeholder {
+        border: 2px dashed var(--gray-300);
+        border-radius: var(--border-radius);
+        background-color: white;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .file-upload-placeholder:hover {
+        border-color: var(--primary);
+        background-color: rgba(37, 99, 235, 0.05);
+    }
+</style>
+
+<%- include('../../partials/footer') %>

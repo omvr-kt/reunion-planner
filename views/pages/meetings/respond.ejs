@@ -36,6 +36,7 @@
                     </div>
                 <% } else { %>
                     <form action="/meetings/respond/<%= participant.access_token %>" method="POST" id="respond-form">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                         <div class="mb-4 d-grid gap-3">
                             <% timeslots.forEach(timeslot => { 
                                 const startTime = new Date(timeslot.start_time);
@@ -48,9 +49,8 @@
                                 <div class="card border">
                                     <div class="card-body">
                                         <h5 class="card-title">
-                                            <%= startTime.toLocaleDateString('fr-FR') %> 
-                                            <%= startTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) %> - 
-                                            <%= endTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}) %>
+                                            <%= formatDateTime(startTime, 'DD/MM/YYYY HH:mm', participant.timezone || 'Europe/Paris') %> - 
+                                            <%= formatDateTime(endTime, 'HH:mm', participant.timezone || 'Europe/Paris') %>
                                         </h5>
                                         
                                         <div class="mt-3">
@@ -92,6 +92,31 @@
     <div class="col-md-4">
         <div class="card mb-4">
             <div class="card-header">
+                <h4>Fuseau horaire</h4>
+            </div>
+            <div class="card-body">
+                <form id="timezone-form" method="POST" action="/meetings/respond/<%= participant.access_token %>/set-timezone">
+                    <div class="mb-3">
+                        <label for="timezone" class="form-label">Choisir un fuseau horaire</label>
+                        <select class="form-select" id="timezone" name="timezone">
+                            
+                            <% commonTimezones.forEach(tz => { %>
+                                <option value="<%= tz %>" <%= (participant.timezone || 'Europe/Paris') === tz ? 'selected' : '' %>>
+                                    <%= tz %>
+                                </option>
+                            <% }); %>
+                        </select>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Appliquer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
                 <h4>Importer un calendrier</h4>
             </div>
             <div class="card-body">
@@ -117,7 +142,6 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Gestion de l'import du calendrier
         const importForm = document.getElementById('import-calendar-form');
         const spinner = document.getElementById('upload-spinner');
         
@@ -133,10 +157,8 @@
                     return;
                 }
                 
-                // Afficher le spinner
                 spinner.classList.remove('d-none');
                 
-                // Envoyer le fichier
                 fetch('/meetings/respond/<%= participant.access_token %>/upload-ics', {
                     method: 'POST',
                     body: formData
@@ -144,7 +166,6 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Mettre à jour les réponses dans le formulaire
                         for (const key in data.availability) {
                             const value = data.availability[key];
                             const yesRadio = document.getElementById(`response_${key.replace('timeslot_', '')}_yes`);
@@ -169,7 +190,6 @@
                     alert('Une erreur s\'est produite lors de l\'analyse du fichier');
                 })
                 .finally(() => {
-                    // Cacher le spinner
                     spinner.classList.add('d-none');
                 });
             });
