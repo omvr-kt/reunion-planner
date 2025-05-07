@@ -254,6 +254,60 @@
             <% } %>
         </div>
         
+        <!-- Nouvelle section pour les participants connectés -->
+        <% 
+        // Vérifier si l'utilisateur actuel est un participant (mais pas l'organisateur)
+        const currentUserAsParticipant = participants.find(p => p.user_id === locals.user.id && p.id !== meeting.organizer_id);
+        if (currentUserAsParticipant && !meeting.is_finalized) { 
+        %>
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <h3 class="mb-0">
+                        <i class="bi bi-calendar-check mr-2"></i>Vos disponibilités
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <% if (currentUserAsParticipant.has_responded) { %>
+                        <div class="alert alert-success mb-3">
+                            <i class="bi bi-check-circle mr-2"></i>
+                            Vous avez déjà répondu à cette invitation. Vous pouvez modifier vos réponses ci-dessous.
+                        </div>
+                    <% } else { %>
+                        <div class="alert alert-warning mb-3">
+                            <i class="bi bi-exclamation-triangle mr-2"></i>
+                            Vous n'avez pas encore répondu à cette invitation. Veuillez indiquer vos disponibilités.
+                        </div>
+                    <% } %>
+                    
+                    <a href="/meetings/respond/<%= currentUserAsParticipant.access_token %>" class="btn btn-primary mb-3">
+                        <i class="bi bi-calendar-date mr-2"></i>Répondre à l'invitation
+                    </a>
+                    
+                    <!-- Section pour importer un calendrier ICS -->
+                    <div class="card mt-4">
+                        <div class="card-header d-flex align-items-center">
+                            <h4 class="mb-0"><i class="bi bi-calendar-plus mr-2"></i>Importer un calendrier</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info mb-3">
+                                <i class="bi bi-info-circle mr-2"></i>
+                                <strong>Comment ça marche :</strong>
+                                <ul class="mt-2 mb-0">
+                                    <li>Exportez votre calendrier au format .ics depuis votre application de calendrier</li>
+                                    <li>Le système analysera automatiquement vos conflits d'horaire</li>
+                                    <li>Vos disponibilités seront pré-remplies en fonction de votre calendrier existant</li>
+                                </ul>
+                            </div>
+                            
+                            <a href="/meetings/respond/<%= currentUserAsParticipant.access_token %>#import-section" class="btn btn-outline-primary">
+                                <i class="bi bi-calendar-plus mr-2"></i>Importer mon calendrier
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+        
     </div>
 </div>
 

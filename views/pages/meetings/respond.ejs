@@ -115,26 +115,53 @@
             </div>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-header">
-                <h4>Importer un calendrier</h4>
+        <div class="card mb-4" id="import-section">
+            <div class="card-header d-flex align-items-center">
+                <h4 class="mb-0"><i class="bi bi-calendar-plus mr-2"></i>Importer un calendrier</h4>
             </div>
             <div class="card-body">
-                <p>Vous pouvez importer votre calendrier au format .ics pour analyser automatiquement vos disponibilités.</p>
+                <div class="alert alert-info mb-3">
+                    <i class="bi bi-info-circle mr-2"></i>
+                    <strong>Comment ça marche :</strong>
+                    <ul class="mt-2 mb-0">
+                        <li>Exportez votre calendrier au format .ics depuis votre application de calendrier (Google Calendar, Outlook, Apple Calendar...)</li>
+                        <li>Importez le fichier ici pour que le système détecte automatiquement vos conflits d'horaire</li>
+                        <li>Vos disponibilités seront pré-remplies en fonction de votre calendrier existant</li>
+                    </ul>
+                </div>
                 
                 <form id="import-calendar-form" enctype="multipart/form-data">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <div class="mb-3">
                         <label for="ics_file" class="form-label">Fichier .ics</label>
-                        <input class="form-control" type="file" id="ics_file" name="ics_file" accept=".ics">
+                        <div class="input-group">
+                            <input class="form-control" type="file" id="ics_file" name="ics_file" accept=".ics">
+                            <span class="input-group-text">
+                                <i class="bi bi-calendar-check"></i>
+                            </span>
+                        </div>
+                        <div class="form-text mt-1">Formats supportés : .ics (iCalendar)</div>
                     </div>
                     
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-outline-primary">
+                        <button type="submit" class="btn btn-outline-primary" id="analyze-button">
+                            <i class="bi bi-search mr-2"></i>
+                            <span id="button-text">Analyser les disponibilités</span>
                             <span class="spinner-border spinner-border-sm d-none" id="upload-spinner"></span>
-                            Analyser les disponibilités
                         </button>
                     </div>
                 </form>
+                
+                <div class="mt-3 d-none" id="analysis-result">
+                    <div class="alert alert-success d-none" id="success-result">
+                        <i class="bi bi-check-circle mr-2"></i>
+                        <span>Analyse terminée ! Vos disponibilités ont été pré-remplies.</span>
+                    </div>
+                    <div class="alert alert-danger d-none" id="error-result">
+                        <i class="bi bi-exclamation-circle mr-2"></i>
+                        <span id="error-message">Une erreur s'est produite.</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -144,8 +171,32 @@
     document.addEventListener('DOMContentLoaded', function() {
         const importForm = document.getElementById('import-calendar-form');
         const spinner = document.getElementById('upload-spinner');
+        const buttonText = document.getElementById('button-text');
+        const analyzeButton = document.getElementById('analyze-button');
+        const analysisResult = document.getElementById('analysis-result');
+        const successResult = document.getElementById('success-result');
+        const errorResult = document.getElementById('error-result');
+        const errorMessage = document.getElementById('error-message');
         
         if (importForm) {
+            // Ajouter un événement pour prévisualiser le nom du fichier
+            const fileInput = document.getElementById('ics_file');
+            fileInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    if (ext !== 'ics') {
+                        errorResult.classList.remove('d-none');
+                        successResult.classList.add('d-none');
+                        analysisResult.classList.remove('d-none');
+                        errorMessage.textContent = 'Format de fichier non supporté. Veuillez sélectionner un fichier .ics';
+                        this.value = '';
+                    } else {
+                        analysisResult.classList.add('d-none');
+                    }
+                }
+            });
+            
             importForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
@@ -153,11 +204,20 @@
                 const fileInput = document.getElementById('ics_file');
                 
                 if (!fileInput.files[0]) {
-                    alert('Veuillez sélectionner un fichier .ics');
+                    errorResult.classList.remove('d-none');
+                    successResult.classList.add('d-none');
+                    analysisResult.classList.remove('d-none');
+                    errorMessage.textContent = 'Veuillez sélectionner un fichier .ics';
                     return;
                 }
                 
+                // Afficher le spinner et désactiver le bouton
                 spinner.classList.remove('d-none');
+                buttonText.textContent = 'Analyse en cours...';
+                analyzeButton.disabled = true;
+                
+                // Masquer les messages précédents
+                analysisResult.classList.add('d-none');
                 
                 fetch('/meetings/respond/<%= participant.access_token %>/upload-ics', {
                     method: 'POST',
@@ -165,7 +225,19 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    // Afficher la section résultat
+                    analysisResult.classList.remove('d-none');
+                    
                     if (data.success) {
+                        // Afficher le message de succès
+                        successResult.classList.remove('d-none');
+                        errorResult.classList.add('d-none');
+                        
+                        // Compter les créneaux disponibles et non disponibles
+                        let disponibles = 0;
+                        let nonDisponibles = 0;
+                        
+                        // Mettre à jour les boutons radio
                         for (const key in data.availability) {
                             const value = data.availability[key];
                             const yesRadio = document.getElementById(`response_${key.replace('timeslot_', '')}_yes`);
@@ -174,23 +246,57 @@
                             if (yesRadio && noRadio) {
                                 if (value === 'yes') {
                                     yesRadio.checked = true;
+                                    disponibles++;
                                 } else {
                                     noRadio.checked = true;
+                                    nonDisponibles++;
                                 }
                             }
                         }
                         
-                        alert('Votre calendrier a été analysé avec succès. Veuillez vérifier vos disponibilités et les enregistrer.');
+                        // Message personnalisé en fonction du résultat et des statistiques
+                        let message = 'Analyse terminée ! ';
+                        if (disponibles > 0 && nonDisponibles > 0) {
+                            message += `Nous avons trouvé ${disponibles} créneau(x) disponible(s) et ${nonDisponibles} créneau(x) non disponible(s).`;
+                        } else if (disponibles > 0) {
+                            message += `Vous êtes disponible pour tous les créneaux proposés.`;
+                        } else if (nonDisponibles > 0) {
+                            message += `Vous n'êtes disponible pour aucun des créneaux proposés.`;
+                        }
+                        
+                        // Ajouter des informations sur le calendrier analysé si disponibles
+                        if (data.stats) {
+                            message += ` ${data.stats.totalEvents} événement(s) analysé(s) dans votre calendrier.`;
+                        }
+                        
+                        successResult.querySelector('span').textContent = message;
+                        
+                        // Scroll jusqu'au début du formulaire de réponse pour vérifier les disponibilités
+                        const respondForm = document.getElementById('respond-form');
+                        if (respondForm) {
+                            setTimeout(() => {
+                                respondForm.scrollIntoView({ behavior: 'smooth' });
+                            }, 500);
+                        }
                     } else {
-                        alert('Erreur : ' + (data.error || 'Impossible d\'analyser le fichier'));
+                        // Afficher le message d'erreur
+                        errorResult.classList.remove('d-none');
+                        successResult.classList.add('d-none');
+                        errorMessage.textContent = 'Erreur : ' + (data.error || 'Impossible d\'analyser le fichier');
                     }
                 })
                 .catch(error => {
                     console.error('Erreur:', error);
-                    alert('Une erreur s\'est produite lors de l\'analyse du fichier');
+                    analysisResult.classList.remove('d-none');
+                    errorResult.classList.remove('d-none');
+                    successResult.classList.add('d-none');
+                    errorMessage.textContent = 'Une erreur s\'est produite lors de l\'analyse du fichier';
                 })
                 .finally(() => {
+                    // Rétablir l'état du bouton
                     spinner.classList.add('d-none');
+                    buttonText.textContent = 'Analyser les disponibilités';
+                    analyzeButton.disabled = false;
                 });
             });
         }

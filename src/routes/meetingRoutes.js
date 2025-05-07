@@ -54,7 +54,7 @@ router.post('/set-timezone',
 router.get('/respond/:token', meetingController.getResponsePage);
 router.post('/respond/:token', meetingController.saveResponse);
 router.post('/respond/:token/set-timezone', meetingController.setParticipantTimezone);
-router.post('/respond/:token/upload-ics', upload.single('ics_file'), icsController.analyzeIcsFile);
+router.post('/respond/:token/upload-ics', upload.single('ics_file'), csrfMiddleware.verify, icsController.analyzeIcsFile);
 router.get('/respond/:token/export-ics', meetingController.exportToICSPublic);
 
 module.exports = router;
