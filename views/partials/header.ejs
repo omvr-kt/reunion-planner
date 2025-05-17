@@ -70,7 +70,7 @@
         </div>
     </nav>
     
-    <main class="container py-4">
+    <main class="container py-4 <%= typeof customClass !== 'undefined' ? customClass : '' %>">
         <% if (locals.successMessage) { %>
             <div class="alert alert-success">
                 <i class="bi bi-check-circle mr-2"></i>
