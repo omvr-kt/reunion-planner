@@ -1,48 +1,29 @@
-<%- include('../../partials/header', { customClass: 'auth-page' }) %>
-<style>
-    main.container.auth-page {
-        max-width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-</style>
-<div class="auth-container">
-    <div class="row w-100 mx-0 mt-0 mb-3">
-        <div class="col-12 col-lg-11 col-xl-10 mx-auto px-0">
-            <div class="card auth-card" style="box-shadow: 0 15px 30px rgba(0,0,0,0.1); border-radius: 1rem; overflow: hidden; max-width: 100%; width: 100%;">
-                <div class="card-body p-0">
-                    <div class="px-4 px-lg-5 py-5" style="padding-top: 2.5rem; padding-bottom: 2.5rem;">
-                        <h2 class="text-center mb-5" style="font-size: 2.4rem; font-weight: 700; color: var(--primary);">Connexion</h2>
-                        
-                        <form action="/auth/login" method="POST" class="auth-form" style="max-width: 850px; margin: 0 auto;">
-                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                <div class="row">
-                                    <div class="col-md-6 mb-4">
-                                        <label for="email" class="form-label">Adresse email</label>
-                                        <input type="email" class="form-control form-control-lg" id="email" name="email" placeholder="nom@exemple.com" required style="font-size: 1.2rem; padding: 1rem 1.5rem; border-radius: 0.75rem;">
-                                    </div>
-                                    
-                                    <div class="col-md-6 mb-4">
-                                        <label for="password" class="form-label">Mot de passe</label>
-                                        <input type="password" class="form-control form-control-lg" id="password" name="password" placeholder="Votre mot de passe" required style="font-size: 1.2rem; padding: 1rem 1.5rem; border-radius: 0.75rem;">
-                                    </div>
-                                </div>
-                                
-                                <div class="row mt-4">
-                                    <div class="col-md-6 offset-md-3">
-                                        <div class="d-grid gap-2">
-                                            <button type="submit" class="btn btn-primary btn-lg py-4" style="font-size: 1.2rem; font-weight: 700;">
-                                                <i class="bi bi-box-arrow-in-right mr-2"></i>Se connecter
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </form>
-                            
-                            <div class="text-center mt-5">
-                                <p class="mb-0" style="font-size: 1.1rem;">Pas encore de compte ? <a href="/auth/register" class="fw-bold">S'inscrire</a></p>
-                            </div>
+<%- include('../../partials/header') %>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-11 col-xl-10">
+            <div class="card" style="box-shadow: 0 15px 30px rgba(0,0,0,0.1);">
+                <div class="card-body p-5">
+                    <h2 class="text-center mb-4">Connexion</h2>
+                    
+                    <form action="/auth/login" method="POST" class="auth-form">
+                        <div class="mb-4">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
                         </div>
+                        
+                        <div class="mb-4">
+                            <label for="password" class="form-label">Mot de passe</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-5">
+                            <button type="submit" class="btn btn-primary btn-lg">Se connecter</button>
+                        </div>
+                    </form>
+                    
+                    <div class="text-center mt-4">
+                        <p>Pas encore de compte ? <a href="/auth/register">S'inscrire</a></p>
                     </div>
                 </div>
             </div>

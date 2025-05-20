@@ -35,17 +35,6 @@ function setupDateTimeFields() {
             const startField = row.querySelector('.timeslot-start');
             const endField = row.querySelector('.timeslot-end');
             
-            if (startField && startField.value) {
-                const startDate = new Date(startField.value);
-                const now = new Date();
-                
-                if (startDate < now) {
-                    alert('La date et heure de début ne peut pas être dans le passé');
-                    startField.value = '';
-                    return;
-                }
-            }
-            
             if (startField && endField && startField.value && endField.value) {
                 const startDate = new Date(startField.value);
                 const endDate = new Date(endField.value);

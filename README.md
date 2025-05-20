@@ -43,6 +43,7 @@ Application web permettant l'organisation, la gestion et la planification collab
 
 - **Protection XSS complète** via DOMPurify
 - **Sanitization** de toutes les entrées utilisateur
+- **Rate limiting** pour prévenir les attaques par force brute
 
 ### Architecture technique
 

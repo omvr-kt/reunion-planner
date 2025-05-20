@@ -37,8 +37,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
   store: new pgSession({
     pool: pool,
-    tableName: 'session',
-    createTableIfMissing: true
+    tableName: 'session'
   }),
   secret: process.env.SESSION_SECRET,
   resave: false,
@@ -47,13 +46,12 @@ app.use(session({
     maxAge: 30 * 24 * 60 * 60 * 1000,
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax'
+    sameSite: 'strict'
   }
 }));
 
 app.use(require('./src/middlewares/flashMiddleware'));
 
-// Appliquer le middleware CSRF pour générer des tokens
 app.use(csrfMiddleware.generate);
 
 app.set('view engine', 'ejs');

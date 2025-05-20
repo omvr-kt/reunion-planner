@@ -32,12 +32,6 @@ const validationMiddleware = {
           
           const startTime = new Date(startTimeStr);
           const endTime = new Date(endTimeStr);
-          const currentTime = new Date();
-          
-          if (startTime < currentTime) {
-            errors.push('La date de début ne peut pas être dans le passé');
-            break;
-          }
           
           if (startTime >= endTime) {
             errors.push('La date de début doit être antérieure à la date de fin');
