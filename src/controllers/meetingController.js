@@ -17,6 +17,35 @@ const meetingController = {
       const { title, description, location, timeslots, participants } = req.body;
       const organizerId = req.session.user.id;
       
+      // Vérifier si tous les créneaux sont dans le futur
+      const now = new Date();
+      const timeslotsArray = Array.isArray(timeslots) ? timeslots : [timeslots];
+      
+      // Vérifier si au moins un créneau est fourni
+      if (!timeslotsArray.length || !timeslotsArray[0]) {
+        req.flash('error', 'Veuillez ajouter au moins un créneau horaire');
+        return res.redirect('/meetings/create');
+      }
+      
+      // Vérifier si tous les créneaux sont dans le futur
+      let hasPastTimeslot = false;
+      for (const timeslotStr of timeslotsArray) {
+        if (timeslotStr) {
+          const [startTimeStr, endTimeStr] = timeslotStr.split(' - ');
+          const startTime = new Date(startTimeStr);
+          
+          if (startTime < now) {
+            hasPastTimeslot = true;
+            break;
+          }
+        }
+      }
+      
+      if (hasPastTimeslot) {
+        req.flash('error', 'Impossible de créer une réunion avec des créneaux dans le passé');
+        return res.redirect('/meetings/create');
+      }
+      
       const newMeeting = await meetingModel.create({
         title,
         description,
@@ -24,7 +53,6 @@ const meetingController = {
         organizer_id: organizerId
       });
       
-      const timeslotsArray = Array.isArray(timeslots) ? timeslots : [timeslots];
       for (const timeslotStr of timeslotsArray) {
         if (timeslotStr) {
           const [startTimeStr, endTimeStr] = timeslotStr.split(' - ');
@@ -160,7 +188,29 @@ const meetingController = {
       });
       
       if (new_timeslots) {
+        const now = new Date();
         const timeslotsArray = Array.isArray(new_timeslots) ? new_timeslots : [new_timeslots];
+        
+        // Vérifier si tous les nouveaux créneaux sont dans le futur
+        let hasPastTimeslot = false;
+        for (const timeslotStr of timeslotsArray) {
+          if (timeslotStr) {
+            const [startTimeStr, endTimeStr] = timeslotStr.split(' - ');
+            const startTime = new Date(startTimeStr);
+            
+            if (startTime < now) {
+              hasPastTimeslot = true;
+              break;
+            }
+          }
+        }
+        
+        if (hasPastTimeslot) {
+          req.flash('error', 'Impossible d\'ajouter des créneaux dans le passé');
+          return res.redirect(`/meetings/${meetingId}/edit`);
+        }
+        
+        // Ajouter les nouveaux créneaux valides
         for (const timeslotStr of timeslotsArray) {
           if (timeslotStr) {
             const [startTimeStr, endTimeStr] = timeslotStr.split(' - ');

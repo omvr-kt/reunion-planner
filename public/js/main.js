@@ -18,6 +18,18 @@ $(document).ready(function() {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
     
+    // Ajouter des styles CSS pour les champs datetime-local désactivés
+    const style = document.createElement('style');
+    style.textContent = `
+        input[type="datetime-local"]:disabled,
+        input[type="datetime-local"].past-date {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+            opacity: 0.65;
+        }
+    `;
+    document.head.appendChild(style);
+    
     setupDateTimeFields();    
     setupCalendarEvents();
     setupDocumentUploader();
@@ -27,13 +39,42 @@ $(document).ready(function() {
 function setupDateTimeFields() {
     const dateTimeFields = document.querySelectorAll('input[type="datetime-local"]');
     
+    // Définir la date et l'heure minimales (maintenant)
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+    
+    // Appliquer la restriction à tous les champs datetime-local
     dateTimeFields.forEach(field => {
+        // Définir l'attribut min pour empêcher la sélection de dates passées
+        field.setAttribute('min', minDateTime);
+        
+        // Ajouter une classe pour les styles CSS
+        field.classList.add('future-only');
+        
+        // Vérifier si la valeur actuelle est dans le passé
+        if (field.value && new Date(field.value) < now) {
+            field.value = ''; // Effacer la valeur si elle est dans le passé
+        }
+        
         field.addEventListener('change', function() {
             const row = this.closest('.row');
             if (!row) return;
             
             const startField = row.querySelector('.timeslot-start');
             const endField = row.querySelector('.timeslot-end');
+            
+            // Vérifier si la date sélectionnée est dans le passé
+            const selectedDate = new Date(this.value);
+            if (selectedDate < now) {
+                alert('Vous ne pouvez pas sélectionner une date et heure dans le passé');
+                this.value = '';
+                return;
+            }
             
             if (startField && endField && startField.value && endField.value) {
                 const startDate = new Date(startField.value);
