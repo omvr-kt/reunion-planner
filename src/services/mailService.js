@@ -10,6 +10,10 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.MAIL_USER,
     pass: process.env.MAIL_PASS
+  },
+  tls: {
+    // Ne pas échouer sur les certificats invalides
+    rejectUnauthorized: false
   }
 });
 
@@ -31,7 +35,7 @@ const mailService = {
     const responseUrl = `${process.env.APP_URL}/meetings/respond/${participant.access_token}`;
     
     const mailOptions = {
-      from: `"Plateforme de Réunions" <${process.env.MAIL_FROM}>`,
+      from: process.env.MAIL_FROM,
       to: participant.email,
       subject: `Invitation à une réunion : ${meeting.title}`,
       html: `
@@ -66,7 +70,7 @@ const mailService = {
     const endTime = formatDateTime(selectedTimeslot.end_time);
     
     const mailOptions = {
-      from: `"Plateforme de Réunions" <${process.env.MAIL_FROM}>`,
+      from: process.env.MAIL_FROM,
       to: participant.email,
       subject: `Réunion confirmée : ${meeting.title}`,
       html: `

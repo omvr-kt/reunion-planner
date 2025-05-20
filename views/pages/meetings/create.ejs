@@ -40,11 +40,11 @@
                 <div class="row mb-3 timeslot-row">
                     <div class="col-md-6">
                         <label class="form-label">Date et heure de début</label>
-                        <input type="datetime-local" class="form-control timeslot-start" required>
+                        <input type="datetime-local" class="form-control timeslot-start" required min="">
                     </div>
                     <div class="col-md-5">
                         <label class="form-label">Date et heure de fin</label>
-                        <input type="datetime-local" class="form-control timeslot-end" required>
+                        <input type="datetime-local" class="form-control timeslot-end" required min="">
                     </div>
                     <div class="col-md-1 d-flex align-items-end">
                         <button type="button" class="btn btn-outline-danger remove-timeslot">
@@ -90,12 +90,28 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Définir la date minimum (aujourd'hui) pour les champs datetime-local
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const hours = String(today.getHours()).padStart(2, '0');
+        const minutes = String(today.getMinutes()).padStart(2, '0');
+        const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+        
+        // Appliquer la date minimum à tous les champs datetime-local existants
+        document.querySelectorAll('input[type="datetime-local"]').forEach(input => {
+            input.min = minDateTime;
+        });
         document.getElementById('add-timeslot').addEventListener('click', function() {
             const container = document.getElementById('timeslots-container');
             const newRow = document.querySelector('.timeslot-row').cloneNode(true);
             
+            // Appliquer la date minimum aux nouveaux champs
             newRow.querySelector('.timeslot-start').value = '';
+            newRow.querySelector('.timeslot-start').min = minDateTime;
             newRow.querySelector('.timeslot-end').value = '';
+            newRow.querySelector('.timeslot-end').min = minDateTime;
             
             newRow.querySelector('.remove-timeslot').addEventListener('click', function() {
                 if (document.querySelectorAll('.timeslot-row').length > 1) {
@@ -143,12 +159,22 @@
             
             const timeslotsContainer = document.getElementById('timeslots-hidden-container');
             timeslotsContainer.innerHTML = '';
+            let hasError = false;
             
             document.querySelectorAll('.timeslot-row').forEach(row => {
                 const startTime = row.querySelector('.timeslot-start').value;
                 const endTime = row.querySelector('.timeslot-end').value;
                 
                 if (startTime && endTime) {
+                    const startDate = new Date(startTime);
+                    const now = new Date();
+                    
+                    if (startDate < now) {
+                        alert('La date et heure de début ne peut pas être dans le passé');
+                        hasError = true;
+                        return;
+                    }
+                    
                     const hiddenInput = document.createElement('input');
                     hiddenInput.type = 'hidden';
                     hiddenInput.name = 'timeslots[]';
@@ -158,7 +184,9 @@
                 }
             });
             
-            this.submit();
+            if (!hasError) {
+                this.submit();
+            }
         });
     });
 </script>

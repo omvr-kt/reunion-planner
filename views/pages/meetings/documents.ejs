@@ -110,7 +110,8 @@
                 <h3 class="mb-0">Partager un document</h3>
             </div>
             <div class="card-body">
-                <form action="/meetings/<%= meeting.id %>/upload-document" method="POST" enctype="multipart/form-data">
+                <form action="/meetings/<%= meeting.id %>/upload-document" method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <!-- Token CSRF pour debugging: <%= csrfToken %> -->
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     
                     <div class="form-group mb-4">
@@ -156,6 +157,68 @@
                         </button>
                     </div>
                 </form>
+
+                <script>
+                    // Ajouter un écouteur d'événement pour vérifier que le formulaire est soumis correctement
+                    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+                        e.preventDefault(); // Empêcher la soumission normale du formulaire
+                        
+                        const fileInput = document.getElementById('document');
+                        if (!fileInput.files || fileInput.files.length === 0) {
+                            alert('Veuillez sélectionner un fichier à uploader.');
+                            return false;
+                        }
+                        
+                        // Ajouter un log pour montrer que le formulaire est soumis
+                        console.log('Formulaire soumis avec fichier:', fileInput.files[0].name);
+                        
+                        // Afficher un indicateur visuel que l'upload est en cours
+                        const uploadButton = document.getElementById('uploadButton');
+                        uploadButton.innerHTML = '<i class="bi bi-hourglass-split mr-2"></i>Upload en cours...';
+                        uploadButton.disabled = true;
+                        
+                        // Obtenir le jeton CSRF du formulaire
+                        const csrfToken = document.querySelector('input[name="_csrf"]').value;
+                        console.log('CSRF token:', csrfToken);
+                        
+                        // Créer un FormData avec les données du formulaire
+                        const formData = new FormData(this);
+                        
+                        // Ne pas ajouter le token CSRF une deuxième fois, il est déjà dans le formulaire HTML
+                        
+                        // URL sans paramètre CSRF
+                        const url = this.action;
+                        console.log('URL soumission:', url);
+                        
+                        // Soumettre le formulaire via AJAX
+                        fetch(url, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-CSRF-Token': csrfToken
+                            }
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Erreur réseau');
+                            }
+                            return response.text();
+                        })
+                        .then(html => {
+                            console.log('Upload réussi, redirection...');
+                            // Rediriger vers la page actuelle pour voir le résultat
+                            window.location.reload();
+                        })
+                        .catch(error => {
+                            console.error('Erreur upload:', error);
+                            alert('Une erreur s\'est produite lors de l\'upload du fichier. Veuillez réessayer.');
+                            uploadButton.innerHTML = '<i class="bi bi-upload mr-2"></i>Uploader le document';
+                            uploadButton.disabled = false;
+                        });
+                        
+                        return false;
+                    });
+                </script>
             </div>
         </div>
         
@@ -253,19 +316,19 @@
                 uploadButton.disabled = false;
                 
                 const fileIconElement = filePreview.querySelector('.bi');
-                const fileName = file.name.toLowerCase();
+                const fileNameLower = file.name.toLowerCase();
                 
-                if (fileName.endsWith('.pdf')) {
+                if (fileNameLower.endsWith('.pdf')) {
                     fileIconElement.className = 'bi bi-file-earmark-pdf mr-2';
-                } else if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) {
+                } else if (fileNameLower.endsWith('.doc') || fileNameLower.endsWith('.docx')) {
                     fileIconElement.className = 'bi bi-file-earmark-word mr-2';
-                } else if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) {
+                } else if (fileNameLower.endsWith('.xls') || fileNameLower.endsWith('.xlsx')) {
                     fileIconElement.className = 'bi bi-file-earmark-excel mr-2';
-                } else if (fileName.endsWith('.ppt') || fileName.endsWith('.pptx')) {
+                } else if (fileNameLower.endsWith('.ppt') || fileNameLower.endsWith('.pptx')) {
                     fileIconElement.className = 'bi bi-file-earmark-ppt mr-2';
-                } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png')) {
+                } else if (fileNameLower.endsWith('.jpg') || fileNameLower.endsWith('.jpeg') || fileNameLower.endsWith('.png')) {
                     fileIconElement.className = 'bi bi-file-earmark-image mr-2';
-                } else if (fileName.endsWith('.txt')) {
+                } else if (fileNameLower.endsWith('.txt')) {
                     fileIconElement.className = 'bi bi-file-earmark-text mr-2';
                 } else {
                     fileIconElement.className = 'bi bi-file-earmark mr-2';

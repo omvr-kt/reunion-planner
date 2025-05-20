@@ -51,10 +51,18 @@
                                 </div>
                                 
                                 <div class="d-grid gap-2 mt-5">
-                                    <button type="submit" class="btn btn-primary btn-lg py-4" style="font-size: 1.2rem; font-weight: 700;">
+                                    <button type="submit" class="btn btn-primary btn-lg py-4" style="font-size: 1.2rem; font-weight: 700;" id="register-button">
                                         <i class="bi bi-person-check mr-2"></i>Créer mon compte
                                     </button>
                                 </div>
+                                
+                                <script>
+                                  document.getElementById('register-form').addEventListener('submit', function(e) {
+                                    // Désactiver le bouton pour éviter les soumissions multiples
+                                    document.getElementById('register-button').disabled = true;
+                                    document.getElementById('register-button').innerHTML = '<i class="bi bi-hourglass-split mr-2"></i>Traitement en cours...';
+                                  });
+                                </script>
                             </form>
                             
                             <div class="text-center mt-5">

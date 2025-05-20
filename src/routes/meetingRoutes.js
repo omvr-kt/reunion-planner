@@ -39,8 +39,8 @@ router.get('/:id/calendar', authMiddleware.isAuthenticated, meetingController.ge
 router.get('/:id/documents', authMiddleware.isAuthenticated, meetingController.getDocumentsPage);
 router.post('/:id/upload-document', 
     authMiddleware.isAuthenticated, 
+    csrfMiddleware.verify,
     upload.single('document'), 
-    csrfMiddleware.verify, 
     meetingController.uploadDocument
 );
 router.get('/:id/documents/:documentId', authMiddleware.isAuthenticated, meetingController.downloadDocument);
@@ -52,9 +52,9 @@ router.post('/set-timezone',
 );
 
 router.get('/respond/:token', meetingController.getResponsePage);
-router.post('/respond/:token', meetingController.saveResponse);
-router.post('/respond/:token/set-timezone', meetingController.setParticipantTimezone);
-router.post('/respond/:token/upload-ics', upload.single('ics_file'), csrfMiddleware.verify, icsController.analyzeIcsFile);
+router.post('/respond/:token', csrfMiddleware.verify, meetingController.saveResponse);
+router.post('/respond/:token/set-timezone', csrfMiddleware.verify, meetingController.setParticipantTimezone);
+router.post('/respond/:token/upload-ics', csrfMiddleware.verify, upload.single('ics_file'), icsController.analyzeIcsFile);
 router.get('/respond/:token/export-ics', meetingController.exportToICSPublic);
 
 module.exports = router;

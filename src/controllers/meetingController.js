@@ -564,7 +564,25 @@ const meetingController = {
   
   uploadDocument: async (req, res) => {
     try {
+      console.log('Démarrage de uploadDocument');
+      console.log('req.file:', req.file);
+      console.log('req.body:', req.body);
+      
+      // Vérification manuelle du token CSRF pour les requêtes multipart
+      const csrfToken = req.body._csrf || req.query._csrf;
+      console.log('Token CSRF reçu:', csrfToken);
+      console.log('Token CSRF session:', req.session.csrfToken);
+      
+      if (csrfToken !== req.session.csrfToken) {
+        console.error('CSRF token invalide pour upload multipart');
+        console.error('Token reçu:', csrfToken);
+        console.error('Token attendu:', req.session.csrfToken);
+        req.flash('error', 'Erreur de sécurité: token CSRF invalide');
+        return res.redirect(`/meetings/${req.params.id}/documents`);
+      }
+      
       if (!req.file) {
+        console.error('Aucun fichier n\'a été uploadé');
         req.flash('error', 'Aucun fichier n\'a été uploadé');
         return res.redirect(`/meetings/${req.params.id}/documents`);
       }
@@ -572,8 +590,11 @@ const meetingController = {
       const meetingId = req.params.id;
       const userId = req.session.user.id;
       
+      console.log(`Traitement pour meetingId: ${meetingId}, userId: ${userId}`);
+      
       const meeting = await meetingModel.findById(meetingId);
       if (!meeting) {
+        console.error('Réunion non trouvée', meetingId);
         await fs.unlink(req.file.path);
         
         req.flash('error', 'Réunion non trouvée');
@@ -583,11 +604,16 @@ const meetingController = {
       const isOrganizer = meeting.organizer_id === userId;
       let isParticipant = false;
       
+      console.log(`isOrganizer: ${isOrganizer}`);
+      
       if (!isOrganizer) {
         const participants = await meetingModel.getParticipants(meetingId);
         isParticipant = participants.some(p => p.user_id === userId);
         
+        console.log(`isParticipant: ${isParticipant}`);
+        
         if (!isParticipant) {
+          console.error('Utilisateur sans accès à la réunion');
           await fs.unlink(req.file.path);
           
           req.flash('error', 'Vous n\'avez pas accès à cette réunion');
@@ -595,23 +621,26 @@ const meetingController = {
         }
       }
       
-      await meetingModel.addDocument(meetingId, userId, req.file);
+      console.log('Avant addDocument', req.file);
+      const document = await meetingModel.addDocument(meetingId, userId, req.file);
+      console.log('Document ajouté avec succès:', document);
       
       req.flash('success', 'Document uploadé avec succès');
-      res.redirect(`/meetings/${meetingId}/documents`);
+      return res.redirect(`/meetings/${meetingId}/documents`);
     } catch (error) {
       console.error('Erreur upload document:', error);
       
       if (req.file) {
         try {
           await fs.unlink(req.file.path);
+          console.log('Fichier temporaire supprimé après erreur');
         } catch (unlinkError) {
           console.error('Erreur suppression fichier:', unlinkError);
         }
       }
       
       req.flash('error', 'Une erreur s\'est produite lors de l\'upload du document');
-      res.redirect(`/meetings/${req.params.id}/documents`);
+      return res.redirect(`/meetings/${req.params.id}/documents`);
     }
   },
   
