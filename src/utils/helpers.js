@@ -2,6 +2,8 @@
 const DOMPurify = require('dompurify');
 const { JSDOM } = require('jsdom');
 const moment = require('moment-timezone');
+require('moment/locale/fr'); // Importe explicitement la locale française
+moment.locale('fr'); // Configure moment pour utiliser le français globalement
 const crypto = require('crypto');
 const icalGenerator = require('ical-generator');
 
@@ -44,6 +46,8 @@ const helpers = {
   },
   formatDateTime: (date, format = 'DD/MM/YYYY HH:mm', timezone = 'Europe/Paris') => {
     if (!date) return '';
+    // Configurer moment.js pour utiliser le français
+    moment.locale('fr');
     return moment(date).tz(timezone).format(format);
   },
 

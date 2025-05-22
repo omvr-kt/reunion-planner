@@ -7,6 +7,8 @@ const pgSession = require('connect-pg-simple')(session);
 const { pool } = require('./config/database');
 const csrfMiddleware = require('./src/middlewares/csrfMiddleware');
 const moment = require('moment-timezone');
+// Configuration de moment.js pour utiliser le français par défaut
+moment.locale('fr');
 const helmet = require('helmet');
 const cors = require('cors'); // Importation du module cors
 require('dotenv').config();
