@@ -1,7 +1,7 @@
 <%- include('../../partials/header') %>
 
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-    <h1 class="mb-3 mb-md-0"><%= escapeHTML(meeting.title) %></h1>
+    <h1 class="mb-0" style="position: relative; top: -0.1em;"><%= escapeHTML(meeting.title) %></h1>
     
     <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
         <% if (isOrganizer && !meeting.is_finalized) { %>
