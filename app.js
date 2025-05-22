@@ -8,10 +8,24 @@ const { pool } = require('./config/database');
 const csrfMiddleware = require('./src/middlewares/csrfMiddleware');
 const moment = require('moment-timezone');
 const helmet = require('helmet');
+const cors = require('cors'); // Importation du module cors
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Faire confiance au reverse proxy (si vous en utilisez un pour HTTPS)
+// Cela permet à req.protocol et req.secure de refléter la connexion d'origine
+app.set('trust proxy', 1); 
+
+// Configuration CORS
+// Doit être placé avant vos routes et potentiellement avant helmet/session si des problèmes persistent
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://localhost:3000'], // Autoriser les deux origines pendant le développement/test
+  credentials: true, // Important pour les sessions/cookies avec les requêtes cross-origin
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'], // Autoriser l'en-tête CSRF
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'] // Méthodes HTTP à autoriser
+}));
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -20,7 +34,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "code.jquery.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net"],
       imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'"], 
       fontSrc: ["'self'", "cdn.jsdelivr.net"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -79,6 +93,10 @@ app.use((req, res, next) => {
   };
   
   res.locals.userTimezone = req.session.timezone || 'Europe/Paris';
+  // Rendre l'objet utilisateur de la session disponible pour tous les templates
+  if (req.session.user) {
+    res.locals.user = req.session.user;
+  }
   
   res.locals.commonTimezones = [
     'Europe/Paris', 'Europe/London', 'Europe/Berlin', 'Europe/Moscow',

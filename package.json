@@ -12,6 +12,7 @@
     "bcrypt": "^6.0.0",
     "body-parser": "^1.20.2",
     "connect-pg-simple": "^9.0.1",
+    "cors": "^2.8.5",
     "dompurify": "^3.2.5",
     "dotenv": "^16.3.1",
     "ejs": "^3.1.9",

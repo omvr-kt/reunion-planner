@@ -199,19 +199,40 @@
                             }
                         })
                         .then(response => {
-                            if (!response.ok) {
-                                throw new Error('Erreur réseau');
+                            console.log('Réponse brute reçue:', response);
+                            // Nous attendons une réponse JSON dans tous les cas (succès ou erreur contrôlée)
+                            return response.json().then(data => {
+                                // Attacher le statut et 'ok' au corps de la réponse pour un traitement unifié
+                                return { status: response.status, ok: response.ok, body: data };
+                            });
+                        })
+                        .then(({ status, ok, body }) => {
+                            console.log('Réponse traitée:', { status, ok, body });
+                            if (ok && body.success) { // Vérifier la propriété 'success' de notre JSON
+                                console.log('Upload réussi:', body.message);
+                                // Rediriger côté client pour afficher le message flash et la page mise à jour
+                                if (body.redirectUrl) {
+                                    window.location.href = body.redirectUrl;
+                                } else {
+                                    // Fallback si redirectUrl n'est pas fourni, recharger la page actuelle
+                                    window.location.reload();
+                                }
+                            } else {
+                                // Le serveur a répondu avec un statut d'erreur ou body.success est false
+                                const errorMessage = body.message || `Erreur serveur: ${status}`;
+                                console.error('Erreur d\'upload (réponse serveur):', errorMessage);
+                                alert('Erreur: ' + errorMessage); // Afficher le message d'erreur du serveur
+                                
+                                const uploadButton = document.getElementById('uploadButton');
+                                uploadButton.innerHTML = '<i class="bi bi-upload mr-2"></i>Uploader le document';
+                                uploadButton.disabled = false;
                             }
-                            return response.text();
                         })
-                        .then(html => {
-                            console.log('Upload réussi, redirection...');
-                            // Rediriger vers la page actuelle pour voir le résultat
-                            window.location.reload();
-                        })
-                        .catch(error => {
-                            console.error('Erreur upload:', error);
-                            alert('Une erreur s\'est produite lors de l\'upload du fichier. Veuillez réessayer.');
+                        .catch(error => { // Erreurs réseau, ou si response.json() échoue
+                            console.error('Erreur technique fetch:', error);
+                            alert('Une erreur technique s\'est produite lors de l\'upload: ' + error.message);
+                            
+                            const uploadButton = document.getElementById('uploadButton');
                             uploadButton.innerHTML = '<i class="bi bi-upload mr-2"></i>Uploader le document';
                             uploadButton.disabled = false;
                         });

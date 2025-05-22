@@ -92,8 +92,13 @@ const meetingController = {
       const meetingId = req.params.id;
       const userId = req.session.user.id;
       
+      console.log(`[getDetails] Début pour meetingId: ${meetingId}, userId: ${userId}`);
+
       const meeting = await meetingModel.findById(meetingId);
+      console.log(`[getDetails] meetingModel.findById retourné:`, meeting);
+
       if (!meeting) {
+        console.log(`[getDetails] Réunion non trouvée: ${meetingId}`);
         req.flash('error', 'Réunion non trouvée');
         return res.redirect('/dashboard');
       }
@@ -101,23 +106,41 @@ const meetingController = {
       const isOrganizer = meeting.organizer_id === userId;
       let isParticipant = false;
       
+      console.log(`[getDetails] isOrganizer: ${isOrganizer}`);
+
       if (!isOrganizer) {
-        const participants = await meetingModel.getParticipants(meetingId);
-        isParticipant = participants.some(p => p.user_id === userId);
+        console.log(`[getDetails] Vérification participant pour meetingId: ${meetingId}`);
+        const participantsForCheck = await meetingModel.getParticipants(meetingId);
+        console.log(`[getDetails] meetingModel.getParticipants (pour check) retourné:`, participantsForCheck);
+        isParticipant = participantsForCheck.some(p => p.user_id === userId);
         
         if (!isParticipant) {
+          console.log(`[getDetails] Utilisateur non participant: ${userId}`);
           req.flash('error', 'Vous n\'avez pas accès à cette réunion');
           return res.redirect('/dashboard');
         }
       }
       
+      console.log(`[getDetails] Récupération des timeslots pour meetingId: ${meetingId}`);
       const timeslots = await meetingModel.getTimeslots(meetingId);
+      console.log(`[getDetails] meetingModel.getTimeslots retourné:`, timeslots);
+
+      console.log(`[getDetails] Récupération des participants (principale) pour meetingId: ${meetingId}`);
       const participants = await meetingModel.getParticipants(meetingId);
+      console.log(`[getDetails] meetingModel.getParticipants (principale) retourné:`, participants);
       
-      for (const participant of participants) {
-        participant.responses = await meetingModel.getParticipantResponses(participant.id);
+      if (participants && participants.length > 0) {
+        console.log(`[getDetails] Récupération des réponses des participants...`);
+        for (const participant of participants) {
+          console.log(`[getDetails] Récupération réponses pour participantId: ${participant.id}`);
+          participant.responses = await meetingModel.getParticipantResponses(participant.id);
+          console.log(`[getDetails] meetingModel.getParticipantResponses pour ${participant.id} retourné:`, participant.responses);
+        }
+      } else {
+        console.log(`[getDetails] Aucun participant trouvé pour la réunion ${meetingId}`);
       }
       
+      console.log(`[getDetails] Rendu de la vue 'pages/meetings/details'`);
       res.render('pages/meetings/details', {
         title: meeting.title,
         meeting,
@@ -125,8 +148,10 @@ const meetingController = {
         participants,
         isOrganizer
       });
+      console.log(`[getDetails] Vue rendue.`);
+
     } catch (error) {
-      console.error('Erreur détails réunion:', error);
+      console.error(`[getDetails] ERREUR dans getDetails pour meetingId: ${req.params.id}:`, error);
       req.flash('error', 'Une erreur s\'est produite lors du chargement des détails de la réunion');
       res.redirect('/dashboard');
     }
@@ -647,21 +672,26 @@ const meetingController = {
       
       await meetingModel.addDocument(meetingId, userId, req.file);
       
-      req.flash('success', 'Document uploadé avec succès');
-      res.redirect(`/meetings/${meetingId}/documents`);
+      return res.status(200).json({ 
+          success: true, 
+          message: 'Document uploadé avec succès', 
+          redirectUrl: `/meetings/${meetingId}/documents` 
+      });
     } catch (error) {
-      console.error('Erreur upload document:', error);
-      
-      if (req.file) {
-        try {
-          await fs.unlink(req.file.path);
-        } catch (unlinkError) {
-          console.error('Erreur suppression fichier:', unlinkError);
-        }
+      if (req.file && req.file.path) {
+        // Tenter de supprimer le fichier en cas d'erreur après l'upload par multer
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error("Erreur lors de la suppression du fichier après échec de l'upload:", err);
+        });
       }
-      
-      req.flash('error', 'Une erreur s\'est produite lors de l\'upload du document');
-      res.redirect(`/meetings/${req.params.id}/documents`);
+      console.error("Erreur lors de l'upload du document:", error);
+      const errorMessage = error.message || 'Une erreur interne est survenue lors de l\'upload.';
+      req.flash('error', errorMessage);
+      // Renvoyer une réponse JSON d'erreur pour AJAX
+      return res.status(error.status || 500).json({
+          success: false,
+          message: errorMessage
+      });
     }
   },
   
