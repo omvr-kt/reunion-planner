@@ -90,12 +90,93 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        function getFormattedDateTime(date) {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        function addMinutesToDateTimeString(dateTimeStr, minutesToAdd) {
+            if (!dateTimeStr) return ''; // Retourne une chaîne vide si l'entrée est vide
+            const date = new Date(dateTimeStr);
+            date.setMinutes(date.getMinutes() + minutesToAdd);
+            return getFormattedDateTime(date);
+        }
+
+        const now = new Date();
+        // Arrondir à la minute la plus proche pour éviter les problèmes de validation avec les secondes
+        now.setSeconds(0, 0);
+        const nowFormatted = getFormattedDateTime(now);
+
+        function applyTimeslotRestrictions(timeslotRow) {
+            const startInput = timeslotRow.querySelector('.timeslot-start');
+            const endInput = timeslotRow.querySelector('.timeslot-end');
+
+            if (!startInput || !endInput) return;
+
+            // Restriction pour la date de début
+            startInput.min = nowFormatted;
+
+            // Restriction pour la date de fin basée sur la date de début
+            startInput.addEventListener('input', function() {
+                if (this.value) {
+                    const startDateValue = this.value;
+                    const minEndDateValue = addMinutesToDateTimeString(startDateValue, 1);
+                    
+                    endInput.min = minEndDateValue;
+                    
+                    if (!endInput.value || (endInput.value && new Date(endInput.value) < new Date(minEndDateValue))) {
+                        endInput.value = minEndDateValue;
+                    }
+                } else {
+                    endInput.min = nowFormatted;
+                    if (endInput.value && new Date(endInput.value) < new Date(nowFormatted)) {
+                        endInput.value = nowFormatted;
+                    }
+                }
+            });
+            
+            // Définir la restriction initiale pour la date de fin
+            if (startInput.value) {
+                const minEndDateValueInitial = addMinutesToDateTimeString(startInput.value, 1);
+                endInput.min = minEndDateValueInitial;
+                if (endInput.value && new Date(endInput.value) < new Date(minEndDateValueInitial)) {
+                    endInput.value = minEndDateValueInitial;
+                }
+            } else {
+                endInput.min = nowFormatted;
+                 if (endInput.value && new Date(endInput.value) < new Date(nowFormatted)) {
+                    endInput.value = nowFormatted;
+                }
+            }
+
+            // Assurer que la valeur initiale de la date de fin n'est pas antérieure à sa propre restriction minimale
+            // Cette vérification redondante peut être simplifiée car déjà couverte au-dessus
+            // if (endInput.value && endInput.value < endInput.min) {
+            //      endInput.value = endInput.min;
+            // }
+        }
+
+        // Appliquer aux lignes de créneaux existantes (initialement une seule)
+        document.querySelectorAll('.timeslot-row').forEach(applyTimeslotRestrictions);
+
         document.getElementById('add-timeslot').addEventListener('click', function() {
             const container = document.getElementById('timeslots-container');
-            const newRow = document.querySelector('.timeslot-row').cloneNode(true);
+            const templateRow = document.querySelector('.timeslot-row'); // Utiliser la première ligne comme modèle
+            if (!templateRow) return; // Sécurité au cas où la première ligne serait supprimée
+            const newRow = templateRow.cloneNode(true);
             
-            newRow.querySelector('.timeslot-start').value = '';
-            newRow.querySelector('.timeslot-end').value = '';
+            const newStartInput = newRow.querySelector('.timeslot-start');
+            const newEndInput = newRow.querySelector('.timeslot-end');
+
+            newStartInput.value = '';
+            newEndInput.value = '';
+            
+            // Appliquer les restrictions à la nouvelle ligne
+            applyTimeslotRestrictions(newRow);
             
             newRow.querySelector('.remove-timeslot').addEventListener('click', function() {
                 if (document.querySelectorAll('.timeslot-row').length > 1) {
@@ -116,9 +197,10 @@
         
         document.getElementById('add-participant').addEventListener('click', function() {
             const container = document.getElementById('participants-container');
-            const newRow = document.querySelector('.participant-row').cloneNode(true);
+            const templateRow = document.querySelector('.participant-row');
+            if (!templateRow) return;
+            const newRow = templateRow.cloneNode(true);
             
-            newRow.querySelector('.participant-email').value = '';
             newRow.querySelector('.participant-email').value = '';
             
             newRow.querySelector('.remove-participant').addEventListener('click', function() {
@@ -139,26 +221,48 @@
         });
         
         document.getElementById('create-meeting-form').addEventListener('submit', function(e) {
-            e.preventDefault();
+            // Pas de prévention de e.preventDefault() ici si la validation HTML5 suffit
+            // e.preventDefault(); // Décommenter si une validation JS plus complexe est nécessaire avant soumission
             
             const timeslotsContainer = document.getElementById('timeslots-hidden-container');
-            timeslotsContainer.innerHTML = '';
+            timeslotsContainer.innerHTML = ''; // Vider les anciens champs cachés
             
+            let allTimeslotsValid = true;
             document.querySelectorAll('.timeslot-row').forEach(row => {
-                const startTime = row.querySelector('.timeslot-start').value;
-                const endTime = row.querySelector('.timeslot-end').value;
+                const startTimeInput = row.querySelector('.timeslot-start');
+                const endTimeInput = row.querySelector('.timeslot-end');
+                
+                const startTime = startTimeInput.value;
+                const endTime = endTimeInput.value;
                 
                 if (startTime && endTime) {
+                    if (new Date(endTime) < new Date(startTime)) {
+                        allTimeslotsValid = false;
+                        // Optionnel: afficher une erreur plus spécifique ici, bien que la validation HTML5 devrait déjà le faire
+                        // startTimeInput.setCustomValidity('La date de fin ne peut pas être avant la date de début.'); // Exemple
+                    }
+                    // startTimeInput.setCustomValidity(''); // Réinitialiser en cas de validité
+
                     const hiddenInput = document.createElement('input');
                     hiddenInput.type = 'hidden';
                     hiddenInput.name = 'timeslots[]';
                     hiddenInput.value = `${startTime} - ${endTime}`;
-                    
                     timeslotsContainer.appendChild(hiddenInput);
+                } else if (startTimeInput.required || endTimeInput.required) {
+                    // Si les champs sont requis et vides, la validation HTML5 s'en chargera
+                    allTimeslotsValid = false;
                 }
             });
+
+            if (!allTimeslotsValid) {
+                e.preventDefault(); // Empêcher la soumission si la validation JS personnalisée échoue
+                // Vous pouvez afficher un message d'erreur global ici si nécessaire
+                alert('Veuillez corriger les erreurs dans les créneaux horaires.');
+                return;
+            }
             
-            this.submit();
+            // Si e.preventDefault() a été appelé plus haut, il faut soumettre manuellement:
+            // this.submit(); // Décommenter si e.preventDefault() est utilisé pour une validation JS personnalisée
         });
     });
 </script>
