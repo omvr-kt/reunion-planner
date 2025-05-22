@@ -29,6 +29,75 @@
     </div>
     
     <div class="card mb-4">
+        <div class="card-header">
+            <h4>Options de récurrence</h4>
+        </div>
+        <div class="card-body">
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="is_recurring" name="is_recurring">
+                <label class="form-check-label" for="is_recurring">
+                    Répéter cette réunion
+                </label>
+            </div>
+            
+            <div id="recurrence-options" style="display: none;">
+                <div class="mb-3">
+                    <label class="form-label">Type de récurrence</label>
+                    <div class="d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="recurrence_type" id="recurrence_daily" value="daily" checked>
+                            <label class="form-check-label" for="recurrence_daily">
+                                Quotidien
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="recurrence_type" id="recurrence_weekly" value="weekly">
+                            <label class="form-check-label" for="recurrence_weekly">
+                                Hebdomadaire
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="recurrence_type" id="recurrence_monthly" value="monthly">
+                            <label class="form-check-label" for="recurrence_monthly">
+                                Mensuel
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Fin de la récurrence</label>
+                    <div class="d-flex gap-3 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="recurrence_end_type" id="recurrence_end_count" value="count" checked>
+                            <label class="form-check-label" for="recurrence_end_count">
+                                Après un nombre d'occurrences
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="recurrence_end_type" id="recurrence_end_date" value="date">
+                            <label class="form-check-label" for="recurrence_end_date">
+                                À une date spécifique
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="recurrence-count-container">
+                        <div class="input-group" style="max-width: 200px;">
+                            <input type="number" class="form-control" id="recurrence_count" name="recurrence_count" min="2" value="4">
+                            <span class="input-group-text">occurrences</span>
+                        </div>
+                    </div>
+                    
+                    <div id="recurrence-date-container" style="display: none; max-width: 250px;">
+                        <input type="date" class="form-control" id="recurrence_end_date_input" name="recurrence_end_date">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h4>Propositions de créneaux</h4>
             <button type="button" class="btn btn-outline-primary btn-sm" id="add-timeslot">
@@ -264,6 +333,50 @@
             // Si e.preventDefault() a été appelé plus haut, il faut soumettre manuellement:
             // this.submit(); // Décommenter si e.preventDefault() est utilisé pour une validation JS personnalisée
         });
+        
+        // Gestion des options de récurrence
+        const isRecurringCheckbox = document.getElementById('is_recurring');
+        const recurrenceOptions = document.getElementById('recurrence-options');
+        const recurrenceEndCount = document.getElementById('recurrence_end_count');
+        const recurrenceEndDate = document.getElementById('recurrence_end_date');
+        const recurrenceCountContainer = document.getElementById('recurrence-count-container');
+        const recurrenceDateContainer = document.getElementById('recurrence-date-container');
+        
+        // Initialiser la date minimale pour le champ de date de fin de récurrence
+        const recurrenceEndDateInput = document.getElementById('recurrence_end_date_input');
+        if (recurrenceEndDateInput) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowFormatted = tomorrow.toISOString().split('T')[0]; // Format YYYY-MM-DD
+            recurrenceEndDateInput.min = tomorrowFormatted;
+            
+            // Définir une date par défaut (1 mois plus tard)
+            const defaultEndDate = new Date();
+            defaultEndDate.setMonth(defaultEndDate.getMonth() + 1);
+            recurrenceEndDateInput.value = defaultEndDate.toISOString().split('T')[0];
+        }
+        
+        // Afficher/masquer les options de récurrence
+        isRecurringCheckbox.addEventListener('change', function() {
+            recurrenceOptions.style.display = this.checked ? 'block' : 'none';
+        });
+        
+        // Gérer le type de fin de récurrence (nombre ou date)
+        if (recurrenceEndCount && recurrenceEndDate) {
+            recurrenceEndCount.addEventListener('change', function() {
+                if (this.checked) {
+                    recurrenceCountContainer.style.display = 'block';
+                    recurrenceDateContainer.style.display = 'none';
+                }
+            });
+            
+            recurrenceEndDate.addEventListener('change', function() {
+                if (this.checked) {
+                    recurrenceCountContainer.style.display = 'none';
+                    recurrenceDateContainer.style.display = 'block';
+                }
+            });
+        }
     });
 </script>
 

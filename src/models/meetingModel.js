@@ -43,15 +43,40 @@ const meetingModel = {
   },
 
   create: async (meetingData) => {
-    const { title, description, location, organizer_id } = meetingData;
+    const { 
+      title, 
+      description, 
+      location, 
+      organizer_id, 
+      is_recurring = false, 
+      recurrence_type = null,
+      parent_meeting_id = null
+    } = meetingData;
     
     const query = `
-      INSERT INTO meetings (title, description, location, organizer_id)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO meetings (
+        title, 
+        description, 
+        location, 
+        organizer_id, 
+        is_recurring, 
+        recurrence_type,
+        parent_meeting_id
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `;
     
-    const values = [title, description, location, organizer_id];
+    const values = [
+      title, 
+      description, 
+      location, 
+      organizer_id, 
+      is_recurring, 
+      recurrence_type,
+      parent_meeting_id
+    ];
+    
     const result = await db.query(query, values);
     
     return result.rows[0];
@@ -277,6 +302,67 @@ const meetingModel = {
     
     const result = await db.query(query, [meetingId]);
     return result.rows;
+  },
+  
+  findRecurringInstances: async (parentMeetingId) => {
+    const query = `
+      SELECT m.*, u.first_name as organizer_first_name, u.last_name as organizer_last_name
+      FROM meetings m
+      JOIN users u ON m.organizer_id = u.id
+      WHERE m.parent_meeting_id = $1
+      ORDER BY m.created_at
+    `;
+    
+    const result = await db.query(query, [parentMeetingId]);
+    return result.rows;
+  },
+  
+  findRelatedRecurringMeetings: async (meetingId) => {
+    // D'abord, vérifier si cette réunion est une instance récurrente (a un parent)
+    const parentQuery = `
+      SELECT parent_meeting_id FROM meetings WHERE id = $1 AND parent_meeting_id IS NOT NULL
+    `;
+    
+    const parentResult = await db.query(parentQuery, [meetingId]);
+    
+    if (parentResult.rows.length > 0) {
+      // Cette réunion est une instance récurrente, trouver le parent et les autres instances
+      const parentId = parentResult.rows[0].parent_meeting_id;
+      
+      // Trouver le parent
+      const parent = await meetingModel.findById(parentId);
+      
+      // Trouver toutes les instances liées au même parent
+      const siblings = await meetingModel.findRecurringInstances(parentId);
+      
+      return {
+        isRecurringInstance: true,
+        parentMeeting: parent,
+        siblingMeetings: siblings
+      };
+    } else {
+      // Vérifier si cette réunion est elle-même un parent
+      const childrenQuery = `
+        SELECT COUNT(*) as instance_count FROM meetings WHERE parent_meeting_id = $1
+      `;
+      
+      const childrenResult = await db.query(childrenQuery, [meetingId]);
+      const instanceCount = parseInt(childrenResult.rows[0].instance_count, 10);
+      
+      if (instanceCount > 0) {
+        // Cette réunion est un parent, trouver toutes ses instances
+        const children = await meetingModel.findRecurringInstances(meetingId);
+        
+        return {
+          isParentMeeting: true,
+          childMeetings: children,
+          instanceCount
+        };
+      }
+    }
+    
+    // Cette réunion n'est ni une instance récurrente ni un parent
+    return { isStandalone: true };
   }
 };
 

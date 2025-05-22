@@ -35,6 +35,54 @@
     </div>
 <% } %>
 
+<% if (typeof recurringInfo !== 'undefined' && !recurringInfo.isStandalone) { %>
+    <div class="alert alert-info mb-4">
+        <% if (recurringInfo.isParentMeeting) { %>
+            <i class="bi bi-calendar2-week mr-2"></i>
+            <strong>Réunion récurrente.</strong> Cette réunion fait partie d'une série de <%= recurringInfo.instanceCount + 1 %> réunions.
+            
+            <% if (recurringInfo.childMeetings && recurringInfo.childMeetings.length > 0) { %>
+                <div class="mt-2">
+                    <strong>Autres occurrences :</strong>
+                    <ul class="mb-0 mt-1">
+                        <% recurringInfo.childMeetings.forEach(childMeeting => { %>
+                            <li>
+                                <a href="/meetings/<%= childMeeting.id %>">
+                                    <%= escapeHTML(childMeeting.title) %>
+                                </a>
+                            </li>
+                        <% }); %>
+                    </ul>
+                </div>
+            <% } %>
+        <% } else if (recurringInfo.isRecurringInstance) { %>
+            <i class="bi bi-calendar2-week mr-2"></i>
+            <strong>Occurrence récurrente.</strong> 
+            Cette réunion fait partie d'une série créée à partir de 
+            <a href="/meetings/<%= recurringInfo.parentMeeting.id %>">
+                <%= escapeHTML(recurringInfo.parentMeeting.title) %>
+            </a>.
+            
+            <% if (recurringInfo.siblingMeetings && recurringInfo.siblingMeetings.length > 0) { %>
+                <div class="mt-2">
+                    <strong>Autres occurrences :</strong>
+                    <ul class="mb-0 mt-1">
+                        <% recurringInfo.siblingMeetings.forEach(siblingMeeting => { %>
+                            <% if (siblingMeeting.id != meeting.id) { %>
+                                <li>
+                                    <a href="/meetings/<%= siblingMeeting.id %>">
+                                        <%= escapeHTML(siblingMeeting.title) %>
+                                    </a>
+                                </li>
+                            <% } %>
+                        <% }); %>
+                    </ul>
+                </div>
+            <% } %>
+        <% } %>
+    </div>
+<% } %>
+
 <div class="row">
     <div class="col-lg-8 mb-4">
         <div class="card mb-4">

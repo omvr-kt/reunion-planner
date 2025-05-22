@@ -20,6 +20,11 @@ CREATE TABLE meetings (
     organizer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     is_finalized BOOLEAN DEFAULT FALSE,
     final_timeslot_id INTEGER,
+    is_recurring BOOLEAN DEFAULT FALSE,
+    recurrence_type VARCHAR(20), -- 'daily', 'weekly', 'monthly'
+    recurrence_count INTEGER, -- nombre de répétitions
+    recurrence_end_date DATE, -- date de fin de récurrence (alternative au nombre)
+    parent_meeting_id INTEGER REFERENCES meetings(id) ON DELETE SET NULL, -- pour lier les instances récurrentes
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -81,6 +86,8 @@ CREATE INDEX ON meeting_participants (access_token);
 CREATE INDEX ON timeslots (meeting_id);
 CREATE INDEX ON attendee_responses (participant_id);
 CREATE INDEX ON attendee_responses (timeslot_id);
+CREATE INDEX ON meetings (is_recurring);
+CREATE INDEX ON meetings (parent_meeting_id);
 CREATE INDEX idx_session_expire ON session (expire);
 
 INSERT INTO users (email, password, first_name, last_name, is_organizer)

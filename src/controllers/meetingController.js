@@ -14,7 +14,19 @@ const meetingController = {
   
   create: async (req, res) => {
     try {
-      const { title, description, location, timeslots, participants } = req.body;
+      const { 
+        title, 
+        description, 
+        location, 
+        timeslots, 
+        participants,
+        is_recurring,
+        recurrence_type,
+        recurrence_end_type,
+        recurrence_count,
+        recurrence_end_date
+      } = req.body;
+      
       const organizerId = req.session.user.id;
       
       // Vérifier si tous les créneaux sont dans le futur
@@ -46,13 +58,17 @@ const meetingController = {
         return res.redirect('/meetings/create');
       }
       
+      // Créer la réunion principale
       const newMeeting = await meetingModel.create({
         title,
         description,
         location,
-        organizer_id: organizerId
+        organizer_id: organizerId,
+        is_recurring: is_recurring === 'on' ? true : false,
+        recurrence_type: is_recurring === 'on' ? recurrence_type : null
       });
       
+      // Ajouter les créneaux à la réunion principale
       for (const timeslotStr of timeslotsArray) {
         if (timeslotStr) {
           const [startTimeStr, endTimeStr] = timeslotStr.split(' - ');
@@ -63,6 +79,7 @@ const meetingController = {
         }
       }
       
+      // Ajouter les participants à la réunion principale
       const participantsArray = Array.isArray(participants) ? participants : [participants];
       for (const email of participantsArray) {
         if (email && email.trim()) {
@@ -78,7 +95,102 @@ const meetingController = {
         }
       }
       
-      req.flash('success', 'Réunion créée avec succès');
+      // Si c'est une réunion récurrente, créer les instances supplémentaires
+      if (is_recurring === 'on') {
+        // Déterminer le nombre d'occurrences ou la date de fin
+        let occurrencesCount = 0;
+        let endDate = null;
+        
+        if (recurrence_end_type === 'count') {
+          occurrencesCount = parseInt(recurrence_count, 10) || 4; // Par défaut 4 occurrences
+        } else if (recurrence_end_type === 'date') {
+          endDate = new Date(recurrence_end_date);
+          // Calculer le nombre d'occurrences en fonction de la date de fin
+          // Cela dépend du type de récurrence (quotidien, hebdomadaire, mensuel)
+        }
+        
+        // Récupérer les créneaux de la réunion principale pour les dupliquer
+        const mainTimeslots = await meetingModel.getTimeslots(newMeeting.id);
+        
+        // Créer les instances récurrentes
+        for (let i = 1; i < occurrencesCount; i++) {
+          // Créer une nouvelle instance de réunion liée à la réunion principale
+          const recurringMeeting = await meetingModel.create({
+            title: `${title} (${i+1})`,
+            description,
+            location,
+            organizer_id: organizerId,
+            parent_meeting_id: newMeeting.id
+          });
+          
+          // Calculer les nouveaux créneaux en fonction du type de récurrence
+          for (const timeslot of mainTimeslots) {
+            const startTime = new Date(timeslot.start_time);
+            const endTime = new Date(timeslot.end_time);
+            const duration = endTime - startTime; // Durée en millisecondes
+            
+            let newStartTime, newEndTime;
+            
+            // Créer des copies de date pour éviter de modifier les originales
+            const startTimeCopy = new Date(startTime);
+            
+            switch (recurrence_type) {
+              case 'daily':
+                // Ajouter i jours
+                newStartTime = new Date(startTimeCopy.setDate(startTimeCopy.getDate() + i));
+                break;
+              case 'weekly':
+                // Ajouter i semaines
+                newStartTime = new Date(startTimeCopy.setDate(startTimeCopy.getDate() + (i * 7)));
+                break;
+              case 'monthly':
+                // Ajouter i mois en préservant le jour du mois
+                const originalDay = startTimeCopy.getDate();
+                newStartTime = new Date(startTimeCopy.setMonth(startTimeCopy.getMonth() + i));
+                
+                // Gérer le cas où le mois cible a moins de jours
+                // Par exemple, 31 janvier + 1 mois pourrait donner 2 ou 3 mars au lieu du 28/29 février
+                const newMonth = newStartTime.getMonth();
+                if (newStartTime.getDate() !== originalDay) {
+                  // Si le jour a changé, c'est que nous avons débordé sur le mois suivant
+                  // Revenir au dernier jour du mois précédent
+                  newStartTime = new Date(newStartTime.getFullYear(), newMonth, 0);
+                }
+                break;
+              default:
+                // Par défaut, ajouter i jours
+                newStartTime = new Date(startTimeCopy.setDate(startTimeCopy.getDate() + i));
+            }
+            
+            // Calculer la nouvelle heure de fin en ajoutant la durée à la nouvelle heure de début
+            newEndTime = new Date(newStartTime.getTime() + duration);
+            
+            // Si on a une date de fin et que cette occurrence la dépasse, arrêter
+            if (endDate && newStartTime > endDate) {
+              break;
+            }
+            
+            await meetingModel.addTimeslot(recurringMeeting.id, newStartTime, newEndTime);
+          }
+          
+          // Ajouter les mêmes participants
+          for (const email of participantsArray) {
+            if (email && email.trim()) {
+              const user = await userModel.findByEmail(email.trim());
+              
+              const participant = await meetingModel.addParticipant(
+                recurringMeeting.id,
+                email.trim(),
+                user ? user.id : null
+              );
+              
+              await mailService.sendMeetingInvitation(participant, recurringMeeting);
+            }
+          }
+        }
+      }
+      
+      req.flash('success', is_recurring === 'on' ? 'Réunions récurrentes créées avec succès' : 'Réunion créée avec succès');
       res.redirect(`/meetings/${newMeeting.id}`);
     } catch (error) {
       console.error('Erreur création réunion:', error);
@@ -103,56 +215,90 @@ const meetingController = {
         return res.redirect('/dashboard');
       }
       
-      const isOrganizer = meeting.organizer_id === userId;
-      let isParticipant = false;
-      
+      const isOrganizer = meeting.organizer_id == userId;
       console.log(`[getDetails] isOrganizer: ${isOrganizer}`);
-
-      if (!isOrganizer) {
-        console.log(`[getDetails] Vérification participant pour meetingId: ${meetingId}`);
-        const participantsForCheck = await meetingModel.getParticipants(meetingId);
-        console.log(`[getDetails] meetingModel.getParticipants (pour check) retourné:`, participantsForCheck);
-        isParticipant = participantsForCheck.some(p => p.user_id === userId);
-        
-        if (!isParticipant) {
-          console.log(`[getDetails] Utilisateur non participant: ${userId}`);
-          req.flash('error', 'Vous n\'avez pas accès à cette réunion');
-          return res.redirect('/dashboard');
-        }
-      }
       
-      console.log(`[getDetails] Récupération des timeslots pour meetingId: ${meetingId}`);
       const timeslots = await meetingModel.getTimeslots(meetingId);
-      console.log(`[getDetails] meetingModel.getTimeslots retourné:`, timeslots);
-
-      console.log(`[getDetails] Récupération des participants (principale) pour meetingId: ${meetingId}`);
-      const participants = await meetingModel.getParticipants(meetingId);
-      console.log(`[getDetails] meetingModel.getParticipants (principale) retourné:`, participants);
+      console.log(`[getDetails] ${timeslots.length} créneaux trouvés`);
       
-      if (participants && participants.length > 0) {
-        console.log(`[getDetails] Récupération des réponses des participants...`);
-        for (const participant of participants) {
-          console.log(`[getDetails] Récupération réponses pour participantId: ${participant.id}`);
-          participant.responses = await meetingModel.getParticipantResponses(participant.id);
-          console.log(`[getDetails] meetingModel.getParticipantResponses pour ${participant.id} retourné:`, participant.responses);
-        }
-      } else {
-        console.log(`[getDetails] Aucun participant trouvé pour la réunion ${meetingId}`);
+      const participants = await meetingModel.getParticipants(meetingId);
+      console.log(`[getDetails] ${participants.length} participants trouvés`);
+      
+      const userParticipant = participants.find(p => p.user_id == userId) || 
+                             participants.find(p => p.email === req.session.user.email);
+      console.log(`[getDetails] userParticipant:`, userParticipant);
+      
+      let userResponses = [];
+      if (userParticipant) {
+        userResponses = await meetingModel.getParticipantResponses(userParticipant.id);
+        console.log(`[getDetails] ${userResponses.length} réponses de l'utilisateur trouvées`);
       }
       
-      console.log(`[getDetails] Rendu de la vue 'pages/meetings/details'`);
+      // Convertir les réponses en un format plus facile à utiliser
+      const userResponsesMap = {};
+      userResponses.forEach(response => {
+        userResponsesMap[response.timeslot_id] = {
+          availability: response.availability,
+          comment: response.comment
+        };
+      });
+      
+      // Obtenir les statistiques de disponibilité pour chaque créneau
+      const availabilityStats = await meetingModel.getAvailabilityStats(meetingId);
+      console.log(`[getDetails] Statistiques de disponibilité obtenues`);
+      
+      // Fusionner les statistiques avec les créneaux
+      timeslots.forEach(timeslot => {
+        const stats = availabilityStats.find(stat => stat.timeslot_id === timeslot.id);
+        if (stats) {
+          timeslot.total_participants = parseInt(stats.total_participants || 0);
+          timeslot.available_count = parseInt(stats.available_count || 0);
+          timeslot.unavailable_count = parseInt(stats.unavailable_count || 0);
+          timeslot.response_count = parseInt(stats.response_count || 0);
+          
+          // Calculer le pourcentage de disponibilité
+          if (timeslot.total_participants > 0) {
+            timeslot.availability_percentage = Math.round((timeslot.available_count / timeslot.total_participants) * 100);
+          } else {
+            timeslot.availability_percentage = 0;
+          }
+        }
+      });
+      
+      // Obtenir le fuseau horaire de l'utilisateur
+      const userTimezone = req.session.timezone || 'Europe/Paris';
+      
+      // Obtenir les informations sur les réunions récurrentes liées
+      let recurringInfo = { isStandalone: true };
+      
+      console.log(`[getDetails] Vérification récurrence - meeting.is_recurring:`, meeting.is_recurring);
+      console.log(`[getDetails] Vérification récurrence - meeting.parent_meeting_id:`, meeting.parent_meeting_id);
+      console.log(`[getDetails] Vérification récurrence - meeting.recurrence_type:`, meeting.recurrence_type);
+      
+      if (meeting.is_recurring || meeting.parent_meeting_id) {
+        console.log(`[getDetails] Réunion récurrente détectée, recherche des instances liées...`);
+        recurringInfo = await meetingModel.findRelatedRecurringMeetings(meetingId);
+        console.log(`[getDetails] Informations de récurrence obtenues:`, recurringInfo);
+      } else {
+        console.log(`[getDetails] Réunion non récurrente, aucune information de récurrence à afficher.`);
+      }
+      
       res.render('pages/meetings/details', {
         title: meeting.title,
         meeting,
         timeslots,
         participants,
-        isOrganizer
+        isOrganizer,
+        userParticipant,
+        userResponsesMap,
+        userTimezone,
+        recurringInfo,
+        escapeHTML: sanitizeHTML,
+        formatDateTime: (date, timezone = userTimezone) => formatDateTime(date, timezone)
       });
-      console.log(`[getDetails] Vue rendue.`);
-
     } catch (error) {
-      console.error(`[getDetails] ERREUR dans getDetails pour meetingId: ${req.params.id}:`, error);
-      req.flash('error', 'Une erreur s\'est produite lors du chargement des détails de la réunion');
+      console.error('Erreur lors de l\'affichage des détails de la réunion:', error);
+      req.flash('error', 'Une erreur s\'est produite lors de l\'affichage des détails de la réunion');
       res.redirect('/dashboard');
     }
   },
