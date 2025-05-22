@@ -81,6 +81,7 @@
             <div class="meeting-list">
                 <% meetings.forEach(meeting => { %>
                     <div class="meeting-item" data-title="<%= meeting.title.toLowerCase() %>">
+                        <span style="display: none;" data-created-at="<%= meeting.created_at %>"></span>
                         <div class="p-3 border-bottom d-flex align-items-stretch">
                             <!-- Icône de la réunion (largeur fixe) -->
                             <div class="mr-3 d-flex align-items-center" style="flex: 0 0 50px;">
@@ -169,13 +170,37 @@
             sortSelect.addEventListener('change', function() {
                 const meetingItems = Array.from(document.querySelectorAll('.meeting-item'));
                 
+                // Récupérer les dates de création des réunions si elles existent
+                const getMeetingDate = (item) => {
+                    // Essayer de trouver un élément avec la date de création
+                    const dateEl = item.querySelector('[data-created-at]');
+                    if (dateEl && dateEl.dataset.createdAt) {
+                        return new Date(dateEl.dataset.createdAt);
+                    }
+                    // Fallback: utiliser l'ordre actuel dans le DOM
+                    return Array.from(meetingList.children).indexOf(item);
+                };
+                
                 meetingItems.sort(function(a, b) {
                     if (sortSelect.value === 'name') {
+                        // Tri alphabétique par titre
                         return a.dataset.title.localeCompare(b.dataset.title);
                     } else if (sortSelect.value === 'oldest') {
-                        return 1;
+                        // Tri chronologique (plus anciennes d'abord)
+                        const dateA = getMeetingDate(a);
+                        const dateB = getMeetingDate(b);
+                        if (typeof dateA === 'number' || typeof dateB === 'number') {
+                            return typeof dateA === 'number' && typeof dateB === 'number' ? dateA - dateB : 0;
+                        }
+                        return dateA - dateB;
                     } else {
-                        return -1;
+                        // Tri anti-chronologique (plus récentes d'abord)
+                        const dateA = getMeetingDate(a);
+                        const dateB = getMeetingDate(b);
+                        if (typeof dateA === 'number' || typeof dateB === 'number') {
+                            return typeof dateA === 'number' && typeof dateB === 'number' ? dateB - dateA : 0;
+                        }
+                        return dateB - dateA;
                     }
                 });
                 
